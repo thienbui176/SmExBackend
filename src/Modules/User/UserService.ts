@@ -9,29 +9,29 @@ import { skip } from 'node:test';
 
 @Injectable()
 export class UserService extends AbstractCrudService<User> {
-  constructor(@InjectModel(User.name) protected repository: Model<User>) {
-    super(repository);
-  }
+    constructor(@InjectModel(User.name) protected repository: Model<User>) {
+        super(repository);
+    }
 
-  public findWithPaginate(paginationRequest: PaginationRequest) {
-    const conditionGetListUser: RootFilterQuery<User> = {};
+    public findWithPaginate(paginationRequest: PaginationRequest) {
+        const conditionGetListUser: RootFilterQuery<User> = {};
 
-    return this.paginate(
-      paginationRequest,
-      (skip, limit) => {
-        return this.repository
-          .find(conditionGetListUser)
-          .skip(skip)
-          .limit(limit)
-          .lean();
-      },
-      () => {
-        return this.repository.countDocuments();
-      },
-    );
-  }
+        return this.paginate(
+            paginationRequest,
+            (skip, limit) => {
+                return this.repository
+                    .find(conditionGetListUser)
+                    .skip(skip)
+                    .limit(limit)
+                    .lean();
+            },
+            () => {
+                return this.repository.countDocuments();
+            },
+        );
+    }
 
-  public async findByEmail(email: string) {
-    return await this.repository.findOne({ email }).lean();
-  }
+    public async findByEmail(email: string) {
+        return await this.repository.findOne({ email }).lean();
+    }
 }

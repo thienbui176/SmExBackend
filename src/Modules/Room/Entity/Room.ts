@@ -1,21 +1,21 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 
 export type RoomDocument = HydratedDocument<Room>;
 
 @Schema({ versionKey: false })
 export class Room {
-    @Prop()
+    @Prop({ type: String, isRequired: true, maxlength: 1024 })
     name: string;
 
-    @Prop()
-    description: string;
+    @Prop({ type: String, default: null, maxlength: 1024 })
+    description?: string;
 
-    @Prop()
-    members: string[];
+    @Prop({ ref: 'User', type: [Types.ObjectId] })
+    members: Types.ObjectId[];
 
-    @Prop()
-    hostId: string;
+    @Prop({ ref: 'User', type: Types.ObjectId })
+    hostId: Types.ObjectId;
 }
 
 export const RoomSchema = SchemaFactory.createForClass(Room);
