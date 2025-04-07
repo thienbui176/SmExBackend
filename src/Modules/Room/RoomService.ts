@@ -1,7 +1,9 @@
 import {
     BadRequestException,
     ForbiddenException,
+    Inject,
     Injectable,
+    NotFoundException,
 } from '@nestjs/common';
 import { UserService } from '../User/UserService';
 import { Room } from './Entity/Room';
@@ -21,7 +23,7 @@ export default class RoomService extends AbstractCrudService<Room> {
 
     constructor(
         @InjectModel(Room.name) protected readonly repository: Model<Room>,
-        private readonly userService: UserService,
+        @Inject(UserService) private readonly userService: UserService,
     ) {
         super(repository);
     }
@@ -46,12 +48,9 @@ export default class RoomService extends AbstractCrudService<Room> {
                 await Promise.all(
                     createRoomRequest.members.map(async (memberId) => {
                         const user = await this.userService.findById(memberId);
-                        if (!user)
-                            throw new BadRequestException(Messages.MSG_011);
+                        if (!user) throw new BadRequestException(Messages.MSG_011);
                         if (user.status === USER_STATUS.BLOCKED)
-                            throw new BadRequestException(
-                                Messages.MSG_012(user.profile?.fullName),
-                            );
+                            throw new BadRequestException(Messages.MSG_012(user.profile?.fullName));
                     }),
                 );
                 room.members = createRoomRequest.members.map(
@@ -75,10 +74,7 @@ export default class RoomService extends AbstractCrudService<Room> {
      * @param paginationRequest query lấy danh sách theo phân trang
      * @returns
      */
-    public async getMyRoomsWithPaginate(
-        userId: string,
-        paginationRequest: PaginationRequest,
-    ) {
+    public async getMyRoomsWithPaginate(userId: string, paginationRequest: PaginationRequest) {
         try {
             // received request and handle filter
             const conditionGetListMyRoom: RootFilterQuery<Room> = {
@@ -114,7 +110,7 @@ export default class RoomService extends AbstractCrudService<Room> {
     ) {
         try {
             const room = await this.repository.findById(roomId).lean();
-            if (!room) throw new BadRequestException(Messages.MSG_015);
+            if (!room) throw new NotFoundException(Messages.MSG_015);
 
             /**
              * Chỉ kiểm tra là thành viên trong phòng thì mới có quyền thêm thành viên khác vào phòng
@@ -135,12 +131,9 @@ export default class RoomService extends AbstractCrudService<Room> {
                         throw new BadRequestException(Messages.MSG_022);
                 }),
             );
-            const roomUpdated = await this.repository.findByIdAndUpdate(
-                roomId,
-                {
-                    members: { $push: [...inviteMemberRequest.invitees] },
-                },
-            );
+            const roomUpdated = await this.repository.findByIdAndUpdate(roomId, {
+                members: { $push: [...inviteMemberRequest.invitees] },
+            });
             return roomUpdated;
         } catch (error) {
             this.logger.error(error);
@@ -154,14 +147,10 @@ export default class RoomService extends AbstractCrudService<Room> {
      * @param roomId id phòng thực hiện xoá thành viên
      * @param memberIdRemove id thành viên bị xoá
      */
-    public async removeMember(
-        requesterUserId: string,
-        roomId: string,
-        memberIdRemove: string,
-    ) {
+    public async removeMember(requesterUserId: string, roomId: string, memberIdRemove: string) {
         try {
             const room = await this.repository.findById(roomId).lean();
-            if (!room) throw new BadRequestException(Messages.MSG_015);
+            if (!room) throw new NotFoundException(Messages.MSG_015);
 
             if (room.hostId !== new Types.ObjectId(requesterUserId))
                 throw new ForbiddenException(Messages.MSG_029);
@@ -171,13 +160,10 @@ export default class RoomService extends AbstractCrudService<Room> {
 
             /** Kiểm tra xem member bị xoá có còn nợ hay không? */
 
-            const roomUpdated = await this.repository.findByIdAndUpdate(
-                roomId,
-                {
-                    $pull: { members: new Types.ObjectId(memberIdRemove) },
-                },
-            );
-            return roomUpdated;
+            const roomUpdated = await this.repository.findByIdAndUpdate(roomId, {
+                $pull: { members: new Types.ObjectId(memberIdRemove) },
+            });
+            return !!roomUpdated;
         } catch (error) {
             this.logger.error(error);
             throw error;
@@ -188,7 +174,7 @@ export default class RoomService extends AbstractCrudService<Room> {
      * @param requesterUserId id người thực hiện yêu cầu cập nhật thông tin phòng
      * @param roomId id phòng thực hiện update
      * @param updateRoomRequest payload thông tin cập nhật thông tin phòng
-     * @returns 
+     * @returns
      */
     public async updateRoom(
         requesterUserId: string,
@@ -197,18 +183,15 @@ export default class RoomService extends AbstractCrudService<Room> {
     ) {
         try {
             const room = await this.repository.findById(roomId).lean();
-            if (!room) throw new BadRequestException(Messages.MSG_015);
+            if (!room) throw new NotFoundException(Messages.MSG_015);
 
             if (room.hostId !== new Types.ObjectId(requesterUserId))
                 throw new ForbiddenException(Messages.MSG_029);
 
-            const roomUpdated = await this.repository.findByIdAndUpdate(
-                roomId,
-                {
-                    name: updateRoomRequest.name,
-                    description: updateRoomRequest.description,
-                },
-            );
+            const roomUpdated = await this.repository.findByIdAndUpdate(roomId, {
+                name: updateRoomRequest.name,
+                description: updateRoomRequest.description,
+            });
             return roomUpdated;
         } catch (error) {
             this.logger.error(error);

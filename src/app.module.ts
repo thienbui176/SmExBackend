@@ -6,15 +6,10 @@ import RoomModule from './Modules/Room/RoomModule';
 import { AuthModule } from './Modules/Auth/AuthModule';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TransformInterceptor } from './Core/Interceptors/TransformInterceptor';
+import TransactionModule from './Modules/Transaction/TransactionModule';
 
 @Module({
-    imports: [
-        ConfigsModule,
-        DatabaseModule,
-        UserModule,
-        RoomModule,
-        AuthModule,
-    ],
+    imports: [ConfigsModule, DatabaseModule, UserModule, RoomModule, AuthModule, TransactionModule],
     providers: [{ provide: APP_INTERCEPTOR, useClass: TransformInterceptor }],
 })
-export class AppModule {}
+export default class AppModule {}

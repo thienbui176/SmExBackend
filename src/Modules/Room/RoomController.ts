@@ -1,6 +1,7 @@
 import {
     Body,
     Controller,
+    Delete,
     Get,
     Inject,
     Param,
@@ -22,7 +23,10 @@ import { PaginationRequest } from 'src/Core/Request/PaginationRequest';
 import InviteMemberRequest from './Request/InviteMemberRequest';
 import RemoveMemberRequest from './Request/RemoveMemberRequest';
 import UpdateRoomRequest from './Request/UpdateRoomRequest';
+import { getUserIdFromRequest } from 'src/Core/Utils/Helpers';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth('jwt-access-token')
 @Controller('/rooms')
 export default class RoomController extends BaseController {
     private roomService: RoomService;
@@ -34,15 +38,9 @@ export default class RoomController extends BaseController {
     @Post()
     @ResponseMessage(Messages.MSG_010)
     @UseGuards(JwtAccessAuthGuard)
-    createRoom(
-        @Req() request: Request,
-        @Body() createRoomRequest: CreateRoomRequest,
-    ) {
+    createRoom(@Req() request: Request, @Body() createRoomRequest: CreateRoomRequest) {
         this.logger.log('START CREATE ROOM');
-        const result = this.roomService.createRoom(
-            request?.user.sub,
-            createRoomRequest,
-        );
+        const result = this.roomService.createRoom(request?.user.sub, createRoomRequest);
         this.logger.log('END CREATE ROOM');
         return result;
     }
@@ -50,15 +48,9 @@ export default class RoomController extends BaseController {
     @Get('/my-rooms')
     @ResponseMessage(Messages.MSG_013)
     @UseGuards(JwtAccessAuthGuard)
-    getMyRooms(
-        @Req() request: Request,
-        @Query() paginationRequest: PaginationRequest,
-    ) {
-        const userId = request.user.sub;
-        return this.roomService.getMyRoomsWithPaginate(
-            userId,
-            paginationRequest,
-        );
+    getMyRooms(@Req() request: Request, @Query() paginationRequest: PaginationRequest) {
+        const userId = getUserIdFromRequest(request);
+        return this.roomService.getMyRoomsWithPaginate(userId, paginationRequest);
     }
 
     @Post('/:roomId/invite-members')
@@ -68,27 +60,19 @@ export default class RoomController extends BaseController {
         @Param('roomId') roomId: string,
         @Body() inviteMemberRequest: InviteMemberRequest,
     ) {
-        const userId = request.user.sub;
-        return this.roomService.inviteMember(
-            userId,
-            roomId,
-            inviteMemberRequest,
-        );
+        const userId = getUserIdFromRequest(request);
+        return this.roomService.inviteMember(userId, roomId, inviteMemberRequest);
     }
 
-    @Post('/:roomId/remove-member')
+    @Delete('/:roomId/remove-member')
     @ResponseMessage(Messages.MSG_027)
     removeMember(
         @Req() request: Request,
         @Param('roomId') roomId: string,
         @Body() removeMemberRequest: RemoveMemberRequest,
     ) {
-        const userId = request.user.sub;
-        return this.roomService.removeMember(
-            userId,
-            roomId,
-            removeMemberRequest.memberIdRemove,
-        );
+        const userId = getUserIdFromRequest(request);
+        return this.roomService.removeMember(userId, roomId, removeMemberRequest.memberIdRemove);
     }
 
     @Patch('/:roomId')
@@ -98,7 +82,7 @@ export default class RoomController extends BaseController {
         @Param('roomId') roomId: string,
         @Body() updateRoomRequest: UpdateRoomRequest,
     ) {
-        const userId = request.user.sub;
+        const userId = getUserIdFromRequest(request);
         return this.roomService.updateRoom(userId, roomId, updateRoomRequest);
     }
 }

@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-import { AppModule } from './app.module';
+import AppModule from './app.module';
 import * as compression from 'compression';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
@@ -24,6 +24,17 @@ async function bootstrap() {
                 .setDescription('Api sample for backend SmEx')
                 .setVersion('1.0')
                 .addTag('SmEx API')
+                .addBearerAuth(
+                    {
+                        type: 'http',
+                        scheme: 'bearer',
+                        bearerFormat: 'JWT',
+                        name: 'Authorization',
+                        description: 'Enter JWT token',
+                        in: 'header',
+                    },
+                    'jwt-access-token',
+                )
                 .build(),
         ),
     );

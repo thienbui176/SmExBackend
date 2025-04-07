@@ -9,8 +9,7 @@ export default class Messages {
     /** MSG_002 = 'Email đăng ký đã tồn tại.' */
     static MSG_002 = 'Email đăng ký đã tồn tại.';
     /** MSG_003 = 'Đăng ký tài khoản thành công. Vui lòng kiểm tra email để xác thực tài khoản' */
-    static MSG_003 =
-        'Đăng ký tài khoản thành công. Vui lòng kiểm tra email để xác thực tài khoản';
+    static MSG_003 = 'Đăng ký tài khoản thành công. Vui lòng kiểm tra email để xác thực tài khoản';
     /** MSG_004 = 'Đăng nhập thành công.' */
     static MSG_004 = 'Đăng nhập thành công.';
     /** MSG_005 = 'Tài khoản chưa được xác thực.' */
@@ -36,8 +35,7 @@ export default class Messages {
     static MSG_014 = 'Danh sách người được thêm không thể rỗng.';
 
     /** MSG_012 = (fullName?: string) => `Người dùng ${fullName} đã tồn tại.` */
-    static MSG_022 = (fullName?: string) =>
-        `Người dùng ${fullName} đã thành viên trong phòng.`;
+    static MSG_022 = (fullName?: string) => `Người dùng ${fullName} đã thành viên trong phòng.`;
 
     /** MSG_023 = 'Chỉ thành viên của phòng mới có quyền mời người khác' */
     static MSG_023 = 'Chỉ thành viên của phòng mới có quyền mời người khác';
@@ -60,6 +58,9 @@ export default class Messages {
     /** static MSG_029 = 'Người gửi yêu cầu không phải là chủ phòng.'*/
     static MSG_029 = 'Người gửi yêu cầu không phải là chủ phòng.';
 
+    /** static MSG_030 = 'Người dùng không thuộc phòng này.'; */
+    static MSG_030 = 'Người dùng không thuộc phòng này.';
+
     /** MSG_015 = 'Phòng không tồn tại.' */
     static MSG_015 = 'Phòng không tồn tại.';
     /** MSG_016 = 'Lỗi khi tạo phòng.' */
@@ -74,4 +75,16 @@ export default class Messages {
     static MSG_020 = 'Dữ liệu không hợp lệ.';
     /** MSG_021 = 'Không thể kết nối với server.' */
     static MSG_021 = 'Không thể kết nối với server.';
+
+    /** static MSG_TSS_001 = 'Tạo giao dịch thành công.' */
+    static MSG_TSS_001 = 'Tạo giao dịch thành công.';
+    /** static MSG_TSS_002 = 'Lấy danh sách giao dịch thành công.' */
+    static MSG_TSS_002 = 'Lấy danh sách giao dịch thành công.';
+    /** static MSG_TSS_003 = 'Xoá giao dịch thành công.' */
+    static MSG_TSS_003 = 'Xoá giao dịch thành công.';
+    /** MSG_TSS_004 = 'Giao dịch không tồn tại.' */
+    static MSG_TSS_004 = 'Giao dịch không tồn tại.';
+
+    /** MSG_TSS_005 = 'Giao dịch không thuộc phòng này.' */
+    static MSG_TSS_005 = 'Giao dịch không thuộc phòng này.';
 }
