@@ -1,28 +1,44 @@
-import { Model } from 'mongoose';
+import { Model, RootFilterQuery } from 'mongoose';
 import BaseService from './BaseService';
+import { PaginationRequest } from '../Request/PaginationRequest';
+import { PaginationResult } from '../Interfaces/PaginationResult';
+import { paginate } from '../Utils/Paginate';
 
 export abstract class AbstractCrudService<T> extends BaseService {
     constructor(protected readonly repository: Model<T>) {
-        super()
-     }
-
-    async findAll(): Promise<T[]> {
-        return this.repository.find();
-    }
-
-    async findById(id: string): Promise<T | null> {
-        return this.repository.findById(id);
+        super();
     }
 
     async create(data: Partial<T>): Promise<T> {
-        return this.repository.create(data);
+        return (await this.repository.create(data)).toObject();
     }
 
     async update(id: string, data: Partial<T>): Promise<T | null> {
         return await this.repository.findByIdAndUpdate(id, data, { new: true });
     }
 
+    async findById(id: string): Promise<T | null> {
+        return this.repository.findById(id).exec();
+    }
+
+    async findAll(): Promise<T[]> {
+        return this.repository.find().exec();
+    }
+
     async delete(id: string): Promise<null> {
         return await this.repository.findByIdAndDelete(id);
+    }
+
+    async paginate<T>(
+        pagination: PaginationRequest,
+        getList: (skip: number, limit: number) => Promise<T[]>,
+        getTotal: () => Promise<number>,
+    ): Promise<PaginationResult<T>> {
+        const results = await Promise.all([
+            getList(pagination.skip, pagination.limit),
+            pagination.getTotal ? getTotal() : null,
+        ]);
+
+        return paginate(results, pagination);
     }
 }

@@ -1,4 +1,3 @@
-import { Logger } from '@nestjs/common';
 import { AppLogger } from '../Logger/AppLogger';
 
 export default class BaseService {
@@ -7,4 +6,5 @@ export default class BaseService {
   constructor() {
     this.logger = new AppLogger(this.constructor.name);
   }
+
 }

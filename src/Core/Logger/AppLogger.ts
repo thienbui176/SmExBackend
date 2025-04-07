@@ -19,7 +19,6 @@ export class AppLogger extends Logger {
   }
 
   private writeToFile(level: LogLevel, message: string) {
-    console.log(message);
 
     const timestamp = new Date().toISOString();
     const date = timestamp.slice(0, 10);
@@ -35,7 +34,6 @@ export class AppLogger extends Logger {
   }
 
   error(message: string, trace?: string) {
-    console.log(message);
     super.error(message, trace);
     this.writeToFile('error', `${message} ${trace || ''}`);
   }

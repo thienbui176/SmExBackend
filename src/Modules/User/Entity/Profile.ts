@@ -1,24 +1,25 @@
-import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { GENDER } from 'src/Constants/Gender';
 
 export type RoomDocument = HydratedDocument<Profile>;
 
-@Schema()
+@Schema({ versionKey: false })
 export class Profile {
-    @Prop()
-    fullName?: string
+    @Prop({ required: true, maxlength: 122 })
+    fullName: string;
 
-    @Prop()
-    gender?: string
+    @Prop({ enum: GENDER, default: GENDER.OTHER })
+    gender?: GENDER;
 
-    @Prop()
-    phoneNumber?: string
+    @Prop({ minlength: 10, maxlength: 11 })
+    phoneNumber?: string;
 
-    @Prop()
-    dateOfBirth?: Date
+    @Prop({ default: null })
+    dateOfBirth?: Date;
 
-    @Prop()
-    address?: string
+    @Prop({ default: null, maxlength: 522 })
+    address?: string;
 }
 
 export const ProfileSchema = SchemaFactory.createForClass(Profile);
