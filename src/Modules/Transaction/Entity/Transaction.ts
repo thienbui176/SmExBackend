@@ -4,7 +4,7 @@ import { BaseEntity } from 'src/Core/Base/Entity/BaseEntity';
 
 export type TransactionDocument = HydratedDocument<Transaction>;
 
-@Schema({ versionKey: false })
+@Schema({ versionKey: false, collection: 'SMEX_Transaction' })
 export class Transaction extends BaseEntity {
     @Prop({ type: String, required: true, maxlength: 1024 })
     title: string;

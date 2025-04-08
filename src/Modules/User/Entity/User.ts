@@ -11,7 +11,7 @@ export enum USER_STATUS {
     BLOCKED = 'BLOCKED',
 }
 
-@Schema({ versionKey: false })
+@Schema({ versionKey: false, collection: 'SMEX_User' })
 export class User extends BaseEntity {
     @Prop({ unique: true, required: true })
     email: string;

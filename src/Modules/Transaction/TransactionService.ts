@@ -14,6 +14,10 @@ import RoomService from '../Room/RoomService';
 import Messages from 'src/Core/Messages/Messages';
 import GetTransactionsOfRoomRequest from './Request/GetTransactionOfRoomRequest';
 import { calculateDateDiffInDays } from 'src/Core/Utils/Helpers';
+import { Room } from '../Room/Entity/Room';
+import UpdateTransactionRequest from './Request/UpdateTransactionRequest';
+import TransactionHistoryService from './TransactionHistoryService';
+import { TRANSACTION_HISTORY_ACTION } from './Entity/TransactionHistory';
 
 @Injectable()
 export default class TransactionService extends AbstractCrudService<Transaction> {
@@ -21,6 +25,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         @InjectModel(Transaction.name)
         protected readonly repository: Model<Transaction>,
         private readonly roomService: RoomService,
+        private readonly transactionHistoryService: TransactionHistoryService,
     ) {
         super(repository);
     }
@@ -66,6 +71,15 @@ export default class TransactionService extends AbstractCrudService<Transaction>
             }));
 
             const transactionCreated = await this.repository.create(transaction);
+            if (transactionCreated) {
+                // Lưu lại lịch sử của giao dịch
+                this.transactionHistoryService.create({
+                    action: TRANSACTION_HISTORY_ACTION.CREATE,
+                    newValue: JSON.stringify(transactionCreated),
+                    changedBy: new Types.ObjectId(creatorId),
+                    transactionId: transactionCreated._id,
+                });
+            }
             return transactionCreated;
         } catch (error) {
             this.logger.error(error);
@@ -112,34 +126,32 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         }
     }
 
-    public async removeTransaction(transactionId: string, roomId: string, userId: string) {
+    /**
+     *
+     * @param transactionId
+     * @param roomId
+     * @param requesterUserId
+     * @returns
+     */
+    public async removeTransaction(transactionId: string, roomId: string, requesterUserId: string) {
         try {
             const [transaction, room] = await Promise.all([
-                this.repository.findById(transactionId).lean(),
+                this.repository.findById(transactionId),
                 this.roomService.findById(roomId),
             ]);
 
-            /**
-             * 1. Kiểm tra giao dịch có tồn tại không
-             * 2. Kiểm tra phòng có tồn tại không
-             * 3. Kiểm tra xem người thực hiện xoá giao dịch có thuộc phòng hay không
-             * 4. Kiểm tra giao dịch có thuộc phòng này hay không
-             */
-            if (!transaction) throw new NotFoundException(Messages.MSG_TSS_004);
-            if (!room) throw new NotFoundException(Messages.MSG_015);
-
-            if (!room.members.includes(new Types.ObjectId(userId)))
-                throw new ForbiddenException(Messages.MSG_030);
-
-            if (transaction.roomId.toString() !== roomId)
-                throw new BadRequestException(Messages.MSG_TSS_005);
-
+            await this.checkTransactionAndRoom(transaction, room, requesterUserId);
             const transactionRemoved = await this.repository.findByIdAndUpdate(transactionId, {
                 /** Xoá mềm để ghi lại những giao dịch đã xoá */
                 deletedAt: new Date(),
             });
             if (transactionRemoved) {
                 /** Thực hiện ghi lại lịch sử xoá giao dịch này */
+                await this.transactionHistoryService.create({
+                    changedBy: new Types.ObjectId(requesterUserId),
+                    action: TRANSACTION_HISTORY_ACTION.DELETE,
+                    transactionId: new Types.ObjectId(transactionId),
+                });
             }
 
             return !!transactionRemoved;
@@ -147,5 +159,86 @@ export default class TransactionService extends AbstractCrudService<Transaction>
             this.logger.error(error);
             throw error;
         }
+    }
+
+    /**
+     *
+     * @param transactionId
+     * @param roomId
+     * @param requesterUserId
+     */
+    public async updateTransaction(
+        transactionId: string,
+        updateTransactionRequest: UpdateTransactionRequest,
+        roomId: string,
+        requesterUserId: string,
+    ) {
+        const [transaction, room] = await Promise.all([
+            this.repository.findById(transactionId),
+            this.roomService.findById(roomId),
+        ]);
+
+        await this.checkTransactionAndRoom(transaction, room, requesterUserId);
+
+        if (!room?.members.includes(new Types.ObjectId(updateTransactionRequest.paidBy)))
+            throw new BadGatewayException('Người thanh toán không tồn tại trong phòng.');
+
+        let splitConvertedUserIdToObjectId;
+        if (updateTransactionRequest.split) {
+            updateTransactionRequest.split.forEach((val) => {
+                if (!room.members.includes(new Types.ObjectId(val.userId)))
+                    throw new NotFoundException('Người được chia tiền không tồn tại trong phòng.');
+            });
+
+            splitConvertedUserIdToObjectId = updateTransactionRequest.split.map((val) => ({
+                ...val,
+                userId: new Types.ObjectId(val.userId),
+            }));
+        }
+
+        const transactionUpdated = await this.repository.findByIdAndUpdate(transactionId, {
+            ...updateTransactionRequest,
+            split: splitConvertedUserIdToObjectId,
+        });
+
+        if (transactionUpdated) {
+            /** Thực hiện ghi lại lịch sử cho thay đổi giao dịch (!!!!IMPORTANT) */
+            await this.transactionHistoryService.create({
+                changedBy: new Types.ObjectId(requesterUserId),
+                action: TRANSACTION_HISTORY_ACTION.UPDATE,
+                transactionId: new Types.ObjectId(transactionId),
+                oldValue: JSON.stringify(transaction),
+                newValue: JSON.stringify(updateTransactionRequest),
+            });
+        }
+
+        return transactionUpdated;
+    }
+
+    /**
+     *
+     * @param transaction
+     * @param room
+     * @param requesterUserId
+     */
+    private async checkTransactionAndRoom(
+        transaction: Transaction | null,
+        room: Room | null,
+        requesterUserId: string,
+    ) {
+        /**
+         * 1. Kiểm tra giao dịch có tồn tại không
+         * 2. Kiểm tra phòng có tồn tại không
+         * 3. Kiểm tra xem người thực hiện xoá giao dịch có thuộc phòng hay không
+         * 4. Kiểm tra giao dịch có thuộc phòng này hay không
+         */
+        if (!transaction) throw new NotFoundException(Messages.MSG_TSS_004);
+        if (!room) throw new NotFoundException(Messages.MSG_015);
+
+        if (!room.members.includes(new Types.ObjectId(requesterUserId)))
+            throw new ForbiddenException(Messages.MSG_030);
+
+        if (transaction.roomId.toString() !== room['_id'])
+            throw new BadRequestException(Messages.MSG_TSS_005);
     }
 }

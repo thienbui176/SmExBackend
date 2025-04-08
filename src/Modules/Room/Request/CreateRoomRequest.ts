@@ -1,12 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-    IsArray,
-    IsMongoId,
-    IsNotEmpty,
-    IsOptional,
-    IsString,
-    Length,
-} from 'class-validator';
+import { IsArray, IsMongoId, IsNotEmpty, IsOptional, IsString, Length } from 'class-validator';
+import Messages from 'src/Core/Messages/Messages';
 
 export default class CreateRoomRequest {
     @ApiProperty()
@@ -24,7 +18,6 @@ export default class CreateRoomRequest {
     @ApiProperty()
     @IsOptional()
     @IsArray()
-    @IsMongoId({ each: true })
+    @IsMongoId({ each: true, message: Messages.IS_NOT_MONGO_ID })
     members: string[];
-    hostId: string;
 }

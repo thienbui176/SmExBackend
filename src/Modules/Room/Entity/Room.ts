@@ -3,7 +3,7 @@ import { HydratedDocument, Types } from 'mongoose';
 
 export type RoomDocument = HydratedDocument<Room>;
 
-@Schema({ versionKey: false })
+@Schema({ versionKey: false, collection: 'SMEX_Room' })
 export class Room {
     @Prop({ type: String, isRequired: true, maxlength: 1024 })
     name: string;

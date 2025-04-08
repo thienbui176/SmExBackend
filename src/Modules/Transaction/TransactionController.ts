@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Query,
+    Req,
+    UseGuards,
+} from '@nestjs/common';
 import BaseController from 'src/Core/Base/BaseController';
 import TransactionService from './TransactionService';
 import { Request } from 'express';
@@ -9,11 +20,17 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import { ResponseMessage } from 'src/Core/Metadata/ResponseMessageMetadata';
 import Messages from 'src/Core/Messages/Messages';
 import { JwtAccessAuthGuard } from '../Auth/Guards/JwtAccessGuard';
+import UpdateTransactionRequest from './Request/UpdateTransactionRequest';
+import { PaginationRequest } from 'src/Core/Request/PaginationRequest';
+import TransactionHistoryService from './TransactionHistoryService';
 
 @ApiBearerAuth('jwt-access-token')
 @Controller('room/:roomId/transaction')
 export default class TransactionController extends BaseController {
-    constructor(private readonly transactionService: TransactionService) {
+    constructor(
+        private readonly transactionService: TransactionService,
+        private readonly transactionHistoryService: TransactionHistoryService,
+    ) {
         super();
     }
 
@@ -54,6 +71,36 @@ export default class TransactionController extends BaseController {
             transactionId,
             roomId,
             getUserIdFromRequest(request),
+        );
+    }
+
+    @Patch(':transactionId')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage(Messages.MSG_TSS_005)
+    public async updateTransaction(
+        @Req() request: Request,
+        @Param('roomId') roomId: string,
+        @Param('transactionId') transactionId: string,
+        @Body() updateTransactionRequest: UpdateTransactionRequest,
+    ) {
+        return this.transactionService.updateTransaction(
+            transactionId,
+            updateTransactionRequest,
+            roomId,
+            getUserIdFromRequest(request),
+        );
+    }
+
+    @Get(':transactionId/history')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage('Lấy danh sách lịch sử giao dịch thành công.')
+    public async getHistoryOfTransaction(
+        @Param('transactionId') transactionId: string,
+        @Query() paginationRequest: PaginationRequest,
+    ) {
+        return this.transactionHistoryService.getTransactionHistoryByTransactionIdWithPagination(
+            transactionId,
+            paginationRequest,
         );
     }
 }

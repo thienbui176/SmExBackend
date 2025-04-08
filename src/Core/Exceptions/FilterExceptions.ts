@@ -1,11 +1,6 @@
-import {
-    ExceptionFilter,
-    Catch,
-    ArgumentsHost,
-    HttpException,
-    HttpStatus,
-} from '@nestjs/common';
+import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common';
 import { Request, Response } from 'express';
+import ApiResponse from '../Interfaces/ApiResponse';
 
 @Catch(HttpException)
 export class HttpExceptionFilter implements ExceptionFilter {
@@ -15,11 +10,39 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const request = ctx.getRequest<Request>();
         const status = exception.getStatus();
 
-        response.status(status).json({
+        // response.status(status).json({
+        //     status: HttpStatus[status],
+        //     data: null,
+        //     message: exception.message,
+        //     errors: {},
+        // });
+
+        let errorResponse: ApiResponse<any> = {
+            message:
+                status === HttpStatus.INTERNAL_SERVER_ERROR
+                    ? 'Internal Server Error'
+                    : exception.message,
             status: HttpStatus[status],
             data: null,
-            message: exception.message,
-            errors: {},
-        });
+        };
+        if (status === HttpStatus.BAD_REQUEST) {
+            const validationErrors = exception.getResponse() as any;
+            if (typeof validationErrors === 'object' && validationErrors?.type === 'VALIDATION') {
+                const { type, ...rest } = validationErrors;
+                errorResponse = {
+                    ...errorResponse,
+                    message: 'Validation failed',
+                    errors: rest,
+                };
+            }
+            if (validationErrors) {
+                errorResponse = {
+                    ...errorResponse,
+                    message: 'Validation failed',
+                };
+            }
+        }
+
+        response.status(status).json(errorResponse);
     }
 }

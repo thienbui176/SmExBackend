@@ -156,7 +156,7 @@ export default class RoomService extends AbstractCrudService<Room> {
                 throw new ForbiddenException(Messages.MSG_029);
 
             if (!room.members.includes(new Types.ObjectId(memberIdRemove)))
-                throw new BadRequestException(Messages.MSG_025);
+                throw new ForbiddenException(Messages.MSG_025);
 
             /** Kiểm tra xem member bị xoá có còn nợ hay không? */
 
@@ -193,6 +193,27 @@ export default class RoomService extends AbstractCrudService<Room> {
                 description: updateRoomRequest.description,
             });
             return roomUpdated;
+        } catch (error) {
+            this.logger.error(error);
+            throw error;
+        }
+    }
+
+    /**
+     *
+     * @param roomId
+     * @param userId
+     * @returns
+     */
+    public async getRoomById(roomId: string, userId: string) {
+        try {
+            const room = await this.repository.findById(roomId).lean();
+            if (!room) throw new NotFoundException(Messages.MSG_015);
+
+            if (!room.members.includes(new Types.ObjectId(userId)))
+                throw new ForbiddenException(Messages.MSG_025);
+
+            return this.repository.findById(roomId).lean();
         } catch (error) {
             this.logger.error(error);
             throw error;

@@ -2,15 +2,29 @@ import { NestFactory } from '@nestjs/core';
 import AppModule from './app.module';
 import * as compression from 'compression';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { ValidationPipe } from '@nestjs/common';
+import { BadRequestException, ValidationPipe } from '@nestjs/common';
 import { HttpExceptionFilter } from './Core/Exceptions/FilterExceptions';
+import * as express from 'express';
+import { handleValidationErrors } from './Core/Utils/ValidationError';
+import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
+    app.use(compression());
     app.useGlobalPipes(
         new ValidationPipe({
+            whitelist: true,
             transform: true,
+            forbidNonWhitelisted: true,
+            enableDebugMessages: true,
+            exceptionFactory: (validationErorrs) => {
+                const errors = {
+                    type: 'VALIDATION',
+                    ...handleValidationErrors(validationErorrs),
+                };
+                return new BadRequestException(errors);
+            },
         }),
     );
 
@@ -39,7 +53,18 @@ async function bootstrap() {
         ),
     );
 
-    app.use(compression());
+    app.enableCors({
+        origin: '*',
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        credentials: true,
+    });
+    app.use(cookieParser());
+    app.use(express.json({ limit: '50mb' }));
+    app.use(express.urlencoded({ limit: '50mb', extended: true }));
+    app.setGlobalPrefix('api', {
+        // exclude: [{ path: 'images/:name', method: RequestMethod.GET }],
+    });
+
     await app.listen(process.env.PORT ?? 3000, () => {
         console.log(`Server running on port ${3000}`);
     });

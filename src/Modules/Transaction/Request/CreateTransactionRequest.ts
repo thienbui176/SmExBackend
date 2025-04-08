@@ -12,11 +12,12 @@ import {
     Length,
     ValidateNested,
 } from 'class-validator';
+import Messages from 'src/Core/Messages/Messages';
 
 export class CreateTransactionSplitRequest {
     @ApiProperty()
     @IsNotEmpty()
-    @IsMongoId()
+    @IsMongoId({ message: Messages.IS_NOT_MONGO_ID })
     userId: string;
 
     @ApiProperty()
@@ -51,7 +52,7 @@ export default class CreateTransactionRequest {
 
     @ApiProperty()
     @IsNotEmpty()
-    @IsMongoId()
+    @IsMongoId({ message: Messages.IS_NOT_MONGO_ID })
     paidBy: string;
 
     @ApiProperty({ type: [CreateTransactionSplitRequest] })

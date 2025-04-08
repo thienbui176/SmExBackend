@@ -87,4 +87,6 @@ export default class Messages {
 
     /** MSG_TSS_005 = 'Giao dịch không thuộc phòng này.' */
     static MSG_TSS_005 = 'Giao dịch không thuộc phòng này.';
+
+    static IS_NOT_MONGO_ID = 'Incorrect ID format.';
 }
