@@ -58,6 +58,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
             transaction.paidBy = new Types.ObjectId(createTransactionRequest.paidBy);
             transaction.roomId = new Types.ObjectId(roomId);
             transaction.title = createTransactionRequest.title;
+            transaction.dateOfPurchase = createTransactionRequest.dateOfPurchase;
 
             /** Kiểm tra user trong split có tồn tại trong phòng hay không */
             createTransactionRequest.split.forEach((val) => {
