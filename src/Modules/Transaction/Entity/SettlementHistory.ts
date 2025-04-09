@@ -1,7 +1,19 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
+import { User } from 'src/Modules/User/Entity/User';
 
 export type SettlementHistoryDocument = HydratedDocument<SettlementHistory>;
+
+export class SettlementDetail {
+    @Prop({ ref: User.name, type: Types.ObjectId, required: true })
+    userId: Types.ObjectId;
+
+    @Prop({ type: Number, required: true, min: 0 })
+    totalPaid: number;
+
+    @Prop({ type: Number, required: true, min: 0 })
+    totalPurchased: number;
+}
 
 @Schema({ versionKey: false, collection: 'SMEX_SettlementHistory' })
 export default class SettlementHistory {
@@ -21,16 +33,10 @@ export default class SettlementHistory {
     to: Date;
 
     @Prop({ type: Number, required: true })
-    toalAmount: number;
+    totalAmount: number;
 
     @Prop({
-        type: [
-            {
-                userId: { ref: 'User', type: Types.ObjectId, required: true },
-                totalPaid: { type: Number, required: true, min: 0 },
-                totalPurchased: { type: Number, required: true, min: 0 },
-            },
-        ],
+        type: [SettlementDetail],
         required: true,
     })
     details: {

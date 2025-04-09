@@ -1,9 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AbstractCrudService } from 'src/Core/Base/AbstractCrudService';
-import TransactionHistory from './Entity/TransactionHistory';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery, Types } from 'mongoose';
 import { PaginationRequest } from 'src/Core/Request/PaginationRequest';
+import TransactionHistory from '../Entity/TransactionHistory';
 
 @Injectable()
 export default class TransactionHistoryService extends AbstractCrudService<TransactionHistory> {

@@ -1,5 +1,5 @@
 import { AbstractCrudService } from 'src/Core/Base/AbstractCrudService';
-import { Transaction } from './Entity/Transaction';
+import { Transaction } from '../Entity/Transaction';
 import {
     BadGatewayException,
     BadRequestException,
@@ -9,17 +9,17 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery, Types } from 'mongoose';
-import CreateTransactionRequest from './Request/CreateTransactionRequest';
-import RoomService from '../Room/RoomService';
+import CreateTransactionRequest from '../Request/CreateTransactionRequest';
+import RoomService from '../../Room/RoomService';
 import Messages from 'src/Core/Messages/Messages';
 import GetTransactionsOfRoomRequest, {
     TRANSACTION_SORT_BY,
-} from './Request/GetTransactionOfRoomRequest';
+} from '../Request/GetTransactionOfRoomRequest';
 import { calculateDateDiffInDays, transformOrderByToNumber } from 'src/Core/Utils/Helpers';
-import { Room } from '../Room/Entity/Room';
-import UpdateTransactionRequest from './Request/UpdateTransactionRequest';
+import { Room } from '../../Room/Entity/Room';
+import UpdateTransactionRequest from '../Request/UpdateTransactionRequest';
 import TransactionHistoryService from './TransactionHistoryService';
-import { TRANSACTION_HISTORY_ACTION } from './Entity/TransactionHistory';
+import { TRANSACTION_HISTORY_ACTION } from '../Entity/TransactionHistory';
 
 @Injectable()
 export default class TransactionService extends AbstractCrudService<Transaction> {

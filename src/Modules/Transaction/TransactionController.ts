@@ -11,7 +11,7 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import BaseController from 'src/Core/Base/BaseController';
-import TransactionService from './TransactionService';
+import TransactionService from './Services/TransactionService';
 import { Request } from 'express';
 import CreateTransactionRequest from './Request/CreateTransactionRequest';
 import { getUserIdFromRequest } from 'src/Core/Utils/Helpers';
@@ -22,8 +22,10 @@ import Messages from 'src/Core/Messages/Messages';
 import { JwtAccessAuthGuard } from '../Auth/Guards/JwtAccessGuard';
 import UpdateTransactionRequest from './Request/UpdateTransactionRequest';
 import { PaginationRequest } from 'src/Core/Request/PaginationRequest';
-import TransactionHistoryService from './TransactionHistoryService';
 import { IsMongoIdParam } from 'src/Core/Validations/IsMongoIdParam';
+import TransactionHistoryService from './Services/TransactionHistoryService';
+import SettlementTransactionRequest from './Request/SettlementTransactionRequest';
+import SettlementService from './Services/SettlementService';
 
 @ApiBearerAuth('jwt-access-token')
 @Controller('room/:roomId/transaction')
@@ -31,6 +33,7 @@ export default class TransactionController extends BaseController {
     constructor(
         private readonly transactionService: TransactionService,
         private readonly transactionHistoryService: TransactionHistoryService,
+        private readonly settlementService: SettlementService,
     ) {
         super();
     }
@@ -102,6 +105,21 @@ export default class TransactionController extends BaseController {
         return this.transactionHistoryService.getTransactionHistoryByTransactionIdWithPagination(
             transactionId,
             paginationRequest,
+        );
+    }
+
+    @Post('/settlement')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage('Thực hiện quyết toán thành công.')
+    public async settlementTransaction(
+        @Req() request: Request,
+        @Param('roomId', IsMongoIdParam) roomId: string,
+        @Body() settlementTransactionRequest: SettlementTransactionRequest,
+    ) {
+        return this.settlementService.createSettlementTransaction(
+            getUserIdFromRequest(request),
+            roomId,
+            settlementTransactionRequest,
         );
     }
 }

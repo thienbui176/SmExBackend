@@ -24,7 +24,7 @@ export class User extends BaseEntity {
 
     @Prop({
         type: Profile,
-        ref: 'Profile',
+        ref: Profile.name,
         default: null,
     })
     profile?: Profile;

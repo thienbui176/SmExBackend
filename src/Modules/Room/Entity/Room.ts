@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { RoomSettings } from './RoomSettings';
+import { User } from 'src/Modules/User/Entity/User';
 
 export type RoomDocument = HydratedDocument<Room>;
 
@@ -12,13 +13,13 @@ export class Room {
     @Prop({ type: String, default: null, maxlength: 1024 })
     description?: string;
 
-    @Prop({ ref: 'User', type: [Types.ObjectId], default: [] })
+    @Prop({ ref: User.name, type: [Types.ObjectId], default: [] })
     members: Types.ObjectId[];
 
-    @Prop({ ref: 'User', type: Types.ObjectId, required: true })
+    @Prop({ ref: User.name, type: Types.ObjectId, required: true })
     hostId: Types.ObjectId;
 
-    @Prop({ type: RoomSettings, ref: 'RoomSetting', required: true })
+    @Prop({ type: RoomSettings, ref: RoomSettings.name, required: true })
     settings: RoomSettings;
 }
 

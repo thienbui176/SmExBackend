@@ -25,6 +25,7 @@ import UpdateRoomRequest from './Request/UpdateRoomRequest';
 import { getUserIdFromRequest } from 'src/Core/Utils/Helpers';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { IsMongoIdParam } from 'src/Core/Validations/IsMongoIdParam';
+import TransferHostRequest from './Request/TransferHostRequest';
 
 @ApiBearerAuth('jwt-access-token')
 @Controller('/rooms')
@@ -84,5 +85,19 @@ export default class RoomController extends BaseController {
     ) {
         const userId = getUserIdFromRequest(request);
         return this.roomService.updateRoom(userId, roomId, updateRoomRequest);
+    }
+
+    @Post('/:roomId/transfer-host')
+    @ResponseMessage('')
+    transferHost(
+        @Req() request: Request,
+        @Param('roomId', IsMongoIdParam) roomId: string,
+        @Body() transferHostRequest: TransferHostRequest,
+    ) {
+        return this.roomService.transferHost(
+            roomId,
+            getUserIdFromRequest(request),
+            transferHostRequest.newHostId,
+        );
     }
 }
