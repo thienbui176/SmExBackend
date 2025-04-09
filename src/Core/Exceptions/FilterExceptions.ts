@@ -10,13 +10,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
         const request = ctx.getRequest<Request>();
         const status = exception.getStatus();
 
-        // response.status(status).json({
-        //     status: HttpStatus[status],
-        //     data: null,
-        //     message: exception.message,
-        //     errors: {},
-        // });
-
         let errorResponse: ApiResponse<any> = {
             message:
                 status === HttpStatus.INTERNAL_SERVER_ERROR
@@ -38,7 +31,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
             if (validationErrors) {
                 errorResponse = {
                     ...errorResponse,
-                    message: 'Validation failed',
                 };
             }
         }

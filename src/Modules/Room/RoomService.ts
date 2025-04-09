@@ -102,28 +102,7 @@ export default class RoomService extends AbstractCrudService<Room> {
         inviteMemberRequest: InviteMemberRequest,
     ) {
         try {
-            const room = await this.repository.findById(roomId).lean();
-            if (!room) throw new NotFoundException(Messages.MSG_015);
-
-            /**
-             * Chỉ kiểm tra là thành viên trong phòng thì mới có quyền thêm thành viên khác vào phòng
-             * Có thể xử lí chỉ chủ phòng mới có quyền thêm người khác vào phòng */
-            if (room.members.includes(new Types.ObjectId(requesterUserId)))
-                throw new ForbiddenException(Messages.MSG_023);
-
-            if (
-                !inviteMemberRequest.invitees ||
-                inviteMemberRequest.invitees.length === this.MIN_LENGTH_INVITEES
-            )
-                throw new BadRequestException(Messages.MSG_014);
-            await Promise.all(
-                inviteMemberRequest.invitees.map(async (memberId) => {
-                    const user = await this.userService.findById(memberId);
-                    if (!user) throw new BadRequestException(Messages.MSG_011);
-                    if (room.members.includes(new Types.ObjectId(memberId)))
-                        throw new BadRequestException(Messages.MSG_022);
-                }),
-            );
+            await this.validateInviteMembers(requesterUserId, roomId, inviteMemberRequest);
             const roomUpdated = await this.repository.findByIdAndUpdate(roomId, {
                 members: { $push: [...inviteMemberRequest.invitees] },
             });
@@ -271,6 +250,35 @@ export default class RoomService extends AbstractCrudService<Room> {
                 if (!user) throw new BadRequestException(Messages.MSG_011);
                 if (user.status === USER_STATUS.BLOCKED)
                     throw new BadRequestException(Messages.MSG_012(user.profile?.fullName));
+            }),
+        );
+    }
+
+    private async validateInviteMembers(
+        requesterUserId: string,
+        roomId: string,
+        inviteMemberRequest: InviteMemberRequest,
+    ) {
+        const room = await this.repository.findById(roomId).lean();
+        if (!room) throw new NotFoundException(Messages.MSG_015);
+
+        /**
+         * Chỉ kiểm tra là thành viên trong phòng thì mới có quyền thêm thành viên khác vào phòng
+         * Có thể xử lí chỉ chủ phòng mới có quyền thêm người khác vào phòng */
+        if (room.members.includes(new Types.ObjectId(requesterUserId)))
+            throw new ForbiddenException(Messages.MSG_023);
+
+        if (
+            !inviteMemberRequest.invitees ||
+            inviteMemberRequest.invitees.length === this.MIN_LENGTH_INVITEES
+        )
+            throw new BadRequestException(Messages.MSG_014);
+        await Promise.all(
+            inviteMemberRequest.invitees.map(async (memberId) => {
+                const user = await this.userService.findById(memberId);
+                if (!user) throw new BadRequestException(Messages.MSG_011);
+                if (room.members.includes(new Types.ObjectId(memberId)))
+                    throw new BadRequestException(Messages.MSG_022);
             }),
         );
     }

@@ -18,7 +18,7 @@ export class Transaction extends BaseEntity {
     @Prop({ ref: 'Room', type: Types.ObjectId, required: true })
     roomId: Types.ObjectId;
 
-    @Prop({ type: Date, default: new Date() })
+    @Prop({ type: Date, default: new Date(), index: '' })
     dateOfPurchase: Date;
 
     @Prop({ ref: 'User', type: Types.ObjectId, required: true })
@@ -26,6 +26,9 @@ export class Transaction extends BaseEntity {
 
     @Prop({ ref: 'User', type: Types.ObjectId, required: true })
     createdBy: Types.ObjectId;
+
+    @Prop({type: Date, default: null})
+    settlementAt: Date;
 
     @Prop({
         type: [

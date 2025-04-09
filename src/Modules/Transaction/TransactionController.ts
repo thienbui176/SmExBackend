@@ -23,6 +23,7 @@ import { JwtAccessAuthGuard } from '../Auth/Guards/JwtAccessGuard';
 import UpdateTransactionRequest from './Request/UpdateTransactionRequest';
 import { PaginationRequest } from 'src/Core/Request/PaginationRequest';
 import TransactionHistoryService from './TransactionHistoryService';
+import { IsMongoIdParam } from 'src/Core/Validations/IsMongoIdParam';
 
 @ApiBearerAuth('jwt-access-token')
 @Controller('room/:roomId/transaction')
@@ -39,7 +40,7 @@ export default class TransactionController extends BaseController {
     @ResponseMessage(Messages.MSG_TSS_001)
     public async createTransaction(
         @Req() request: Request,
-        @Param('roomId') roomId: string,
+        @Param('roomId', IsMongoIdParam) roomId: string,
         @Body() createTransactionRequest: CreateTransactionRequest,
     ) {
         return this.transactionService.createTransaction(
@@ -53,7 +54,7 @@ export default class TransactionController extends BaseController {
     @UseGuards(JwtAccessAuthGuard)
     @ResponseMessage(Messages.MSG_TSS_002)
     public async getTransactionsOfRoom(
-        @Param('roomId') roomId: string,
+        @Param('roomId', IsMongoIdParam) roomId: string,
         @Query() getTransactionsOfRoomRequest: GetTransactionsOfRoomRequest,
     ) {
         return this.transactionService.getTransactionOfRoom(roomId, getTransactionsOfRoomRequest);
@@ -64,8 +65,8 @@ export default class TransactionController extends BaseController {
     @ResponseMessage(Messages.MSG_TSS_003)
     public async deleteTransaction(
         @Req() request: Request,
-        @Param('roomId') roomId: string,
-        @Param('transactionId') transactionId: string,
+        @Param('roomId', IsMongoIdParam) roomId: string,
+        @Param('transactionId', IsMongoIdParam) transactionId: string,
     ) {
         return this.transactionService.removeTransaction(
             transactionId,
@@ -79,8 +80,8 @@ export default class TransactionController extends BaseController {
     @ResponseMessage(Messages.MSG_TSS_005)
     public async updateTransaction(
         @Req() request: Request,
-        @Param('roomId') roomId: string,
-        @Param('transactionId') transactionId: string,
+        @Param('roomId', IsMongoIdParam) roomId: string,
+        @Param('transactionId', IsMongoIdParam) transactionId: string,
         @Body() updateTransactionRequest: UpdateTransactionRequest,
     ) {
         return this.transactionService.updateTransaction(
@@ -95,7 +96,7 @@ export default class TransactionController extends BaseController {
     @UseGuards(JwtAccessAuthGuard)
     @ResponseMessage('Lấy danh sách lịch sử giao dịch thành công.')
     public async getHistoryOfTransaction(
-        @Param('transactionId') transactionId: string,
+        @Param('transactionId', IsMongoIdParam) transactionId: string,
         @Query() paginationRequest: PaginationRequest,
     ) {
         return this.transactionHistoryService.getTransactionHistoryByTransactionIdWithPagination(

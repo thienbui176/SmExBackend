@@ -24,6 +24,7 @@ import RemoveMemberRequest from './Request/RemoveMemberRequest';
 import UpdateRoomRequest from './Request/UpdateRoomRequest';
 import { getUserIdFromRequest } from 'src/Core/Utils/Helpers';
 import { ApiBearerAuth } from '@nestjs/swagger';
+import { IsMongoIdParam } from 'src/Core/Validations/IsMongoIdParam';
 
 @ApiBearerAuth('jwt-access-token')
 @Controller('/rooms')
@@ -56,7 +57,7 @@ export default class RoomController extends BaseController {
     @ResponseMessage(Messages.MSG_026)
     inviteMember(
         @Req() request: Request,
-        @Param('roomId') roomId: string,
+        @Param('roomId', IsMongoIdParam) roomId: string,
         @Body() inviteMemberRequest: InviteMemberRequest,
     ) {
         const userId = getUserIdFromRequest(request);
@@ -67,7 +68,7 @@ export default class RoomController extends BaseController {
     @ResponseMessage(Messages.MSG_027)
     removeMember(
         @Req() request: Request,
-        @Param('roomId') roomId: string,
+        @Param('roomId', IsMongoIdParam) roomId: string,
         @Body() removeMemberRequest: RemoveMemberRequest,
     ) {
         const userId = getUserIdFromRequest(request);
@@ -78,7 +79,7 @@ export default class RoomController extends BaseController {
     @ResponseMessage(Messages.MSG_028)
     updateRoom(
         @Req() request: Request,
-        @Param('roomId') roomId: string,
+        @Param('roomId', IsMongoIdParam) roomId: string,
         @Body() updateRoomRequest: UpdateRoomRequest,
     ) {
         const userId = getUserIdFromRequest(request);
