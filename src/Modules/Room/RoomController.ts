@@ -12,7 +12,6 @@ import {
     UseGuards,
 } from '@nestjs/common';
 import RoomService from './RoomService';
-import { AppLogger } from 'src/Core/Logger/AppLogger';
 import BaseController from 'src/Core/Base/BaseController';
 import { ResponseMessage } from 'src/Core/Metadata/ResponseMessageMetadata';
 import Messages from 'src/Core/Messages/Messages';

@@ -9,7 +9,7 @@ import { UserService } from '../User/UserService';
 import { Room } from './Entity/Room';
 import CreateRoomRequest from './Request/CreateRoomRequest';
 import Messages from 'src/Core/Messages/Messages';
-import { USER_STATUS } from '../User/Entity/User';
+import { User, USER_STATUS } from '../User/Entity/User';
 import { Model, RootFilterQuery, Types } from 'mongoose';
 import { AbstractCrudService } from 'src/Core/Base/AbstractCrudService';
 import { InjectModel } from '@nestjs/mongoose';
@@ -45,14 +45,7 @@ export default class RoomService extends AbstractCrudService<Room> {
             room.hostId = new Types.ObjectId(creatorId);
 
             if (createRoomRequest.members) {
-                await Promise.all(
-                    createRoomRequest.members.map(async (memberId) => {
-                        const user = await this.userService.findById(memberId);
-                        if (!user) throw new BadRequestException(Messages.MSG_011);
-                        if (user.status === USER_STATUS.BLOCKED)
-                            throw new BadRequestException(Messages.MSG_012(user.profile?.fullName));
-                    }),
-                );
+                await this.validateMembers(createRoomRequest.members);
                 room.members = createRoomRequest.members.map(
                     (memberId) => new Types.ObjectId(memberId),
                 );
@@ -218,5 +211,67 @@ export default class RoomService extends AbstractCrudService<Room> {
             this.logger.error(error);
             throw error;
         }
+    }
+
+    /**
+     *
+     * @param roomId
+     * @param requesterUserId
+     * @param newHostId
+     * @returns
+     */
+    public async transferHost(roomId: string, requesterUserId: string, newHostId: string) {
+        try {
+            const [room, newHost] = await Promise.all([
+                this.repository.findById(roomId),
+                this.userService.findById(newHostId),
+            ]);
+            this.validateTransferHost(room, newHost, requesterUserId, newHostId);
+
+            const roomUpdated = await this.repository.findByIdAndUpdate(roomId, {
+                hostId: newHostId,
+            });
+            return roomUpdated;
+        } catch (error) {
+            this.logger.error(error);
+            throw error;
+        }
+    }
+
+    /**
+     * @param room
+     * @param newHost
+     * @param requesterUserId
+     * @param newHostId
+     */
+    private validateTransferHost(
+        room: Room | null,
+        newHost: User | null,
+        requesterUserId: string,
+        newHostId: string,
+    ) {
+        if (!room) throw new NotFoundException(Messages.MSG_015);
+        if (!newHost) throw new NotFoundException('Người được sang quyền chủ phòng không tồn tại.');
+        if (room.hostId.toString() !== requesterUserId)
+            throw new ForbiddenException(Messages.MSG_029);
+        if (!room.members.includes(new Types.ObjectId(newHostId))) {
+            throw new BadRequestException(
+                'Người được sang quyền chủ phòng không phải là thành viên.',
+            );
+        }
+    }
+
+    /**
+     * @param memberIds
+     */
+    private async validateMembers(memberIds: string[]) {
+        await Promise.all(
+            memberIds.map(async (memberId) => {
+                const user = await this.userService.findById(memberId);
+                if (!user) throw new BadRequestException(Messages.MSG_011);
+                if (user.status === USER_STATUS.BLOCKED)
+                    throw new BadRequestException(Messages.MSG_012(user.profile?.fullName));
+            }),
+        );
     }
 }

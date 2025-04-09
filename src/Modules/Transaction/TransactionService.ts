@@ -12,8 +12,8 @@ import { Model, RootFilterQuery, Types } from 'mongoose';
 import CreateTransactionRequest from './Request/CreateTransactionRequest';
 import RoomService from '../Room/RoomService';
 import Messages from 'src/Core/Messages/Messages';
-import GetTransactionsOfRoomRequest from './Request/GetTransactionOfRoomRequest';
-import { calculateDateDiffInDays } from 'src/Core/Utils/Helpers';
+import GetTransactionsOfRoomRequest, { TRANSACTION_SORT_BY } from './Request/GetTransactionOfRoomRequest';
+import { calculateDateDiffInDays, transformOrderByToNumber } from 'src/Core/Utils/Helpers';
 import { Room } from '../Room/Entity/Room';
 import UpdateTransactionRequest from './Request/UpdateTransactionRequest';
 import TransactionHistoryService from './TransactionHistoryService';
@@ -114,12 +114,23 @@ export default class TransactionService extends AbstractCrudService<Transaction>
 
             const conditionGetTransactionOfRoom: RootFilterQuery<Transaction> = {
                 roomId: new Types.ObjectId(roomId),
-                createdAt: {
+                dateOfPurchase: {
                     $gte: new Date(getTransactionOfRoomRequest.from),
-                    $lte: new Date(getTransactionOfRoomRequest.to),
+                    $lte: new Date(getTransactionOfRoomRequest.to)
                 },
             };
-            const transactions = await this.repository.find(conditionGetTransactionOfRoom).lean();
+            const sortArgs = {}
+            const orderBy = transformOrderByToNumber(getTransactionOfRoomRequest.orderBy)
+            switch (getTransactionOfRoomRequest.sortBy) {
+                case TRANSACTION_SORT_BY.createdAt:
+                    sortArgs['createdAt'] = orderBy
+                    break;
+                case TRANSACTION_SORT_BY.dateOfPurchase:
+                    sortArgs['dateOfPurchase'] = orderBy
+                    break;
+            }
+
+            const transactions = await this.repository.find(conditionGetTransactionOfRoom).sort(sortArgs).lean();
             return transactions;
         } catch (error) {
             this.logger.error(error);

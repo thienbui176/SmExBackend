@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { ORDER_BY } from 'src/Constants/OrderBy';
 
 /**
  * @param request Express request
@@ -25,4 +26,6 @@ const calculateDateDiffInDays = (from: Date, to: Date): number => {
     return diffInMs / MS_PER_DAY;
 };
 
-export { getUserIdFromRequest, calculateDateDiffInDays };
+const transformOrderByToNumber = (orderBy: ORDER_BY) => orderBy === ORDER_BY.ASC ? 1 : -1
+
+export { getUserIdFromRequest, calculateDateDiffInDays, transformOrderByToNumber };

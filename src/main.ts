@@ -10,6 +10,7 @@ import * as cookieParser from 'cookie-parser';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
+    const port = process.env.PORT ?? 3000
 
     app.use(compression());
     app.useGlobalPipes(
@@ -65,8 +66,8 @@ async function bootstrap() {
         // exclude: [{ path: 'images/:name', method: RequestMethod.GET }],
     });
 
-    await app.listen(process.env.PORT ?? 3000, () => {
-        console.log(`Server running on port ${3000}`);
+    await app.listen(port, () => {
+        console.log(`Server running on port ${port}`);
     });
 }
 

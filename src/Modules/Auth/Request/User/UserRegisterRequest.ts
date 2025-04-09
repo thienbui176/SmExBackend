@@ -27,7 +27,7 @@ export default class UserRegisterRequest {
     @Length(0, 122)
     lastName: string;
 
-    @ApiProperty({ example: 'Male' })
+    @ApiProperty({ example: 'Male', enum: GENDER })
     @IsNotEmpty()
     @IsEnum(GENDER)
     gender: GENDER;
