@@ -22,7 +22,7 @@ export abstract class AbstractCrudService<T> extends BaseService {
     }
 
     async findAll(condition: RootFilterQuery<T>): Promise<T[]> {
-        return this.repository.find().exec();
+        return this.repository.find(condition).exec();
     }
 
     async delete(id: string): Promise<null> {

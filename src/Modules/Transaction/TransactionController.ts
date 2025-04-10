@@ -33,7 +33,6 @@ export default class TransactionController extends BaseController {
     constructor(
         private readonly transactionService: TransactionService,
         private readonly transactionHistoryService: TransactionHistoryService,
-        private readonly settlementService: SettlementService,
     ) {
         super();
     }
@@ -108,18 +107,5 @@ export default class TransactionController extends BaseController {
         );
     }
 
-    @Post('/settlement')
-    @UseGuards(JwtAccessAuthGuard)
-    @ResponseMessage('Thực hiện quyết toán thành công.')
-    public async settlementTransaction(
-        @Req() request: Request,
-        @Param('roomId', IsMongoIdParam) roomId: string,
-        @Body() settlementTransactionRequest: SettlementTransactionRequest,
-    ) {
-        return this.settlementService.createSettlementTransaction(
-            getUserIdFromRequest(request),
-            roomId,
-            settlementTransactionRequest,
-        );
-    }
+   
 }

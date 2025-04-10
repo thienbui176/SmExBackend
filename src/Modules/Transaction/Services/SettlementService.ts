@@ -9,7 +9,7 @@ import TransactionService from './TransactionService';
 import SettlementTransactionRequest from '../Request/SettlementTransactionRequest';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UserService } from 'src/Modules/User/UserService';
-import { calculateDateDiffInDays } from 'src/Core/Utils/Helpers';
+import { calculateDateDiffInDays, convertDateToDDMMYYYY } from 'src/Core/Utils/Helpers';
 
 export default class SettlementService extends AbstractCrudService<SettlementHistory> {
     constructor(
@@ -34,6 +34,7 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
                 settlementTransactionRequest,
             );
             const transactions = await this.transactionService.findAll({
+                // Chỉ thực hiện tính cho những giao dịch chưa được tính.
                 settlementId: { $eq: null },
                 roomId: new Types.ObjectId(roomId),
                 dateOfPurchase: {
@@ -41,7 +42,12 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
                     $lte: new Date(settlementTransactionRequest.to),
                 },
             });
-            console.log(transactions);
+
+            if (!transactions.length)
+                throw new NotFoundException(
+                    `Không có giao dịch nào trong khoảng thời gian từ ${convertDateToDDMMYYYY(settlementTransactionRequest.from)} đến ${convertDateToDDMMYYYY(settlementTransactionRequest.to)}`,
+                );
+
             const detailsAfterCalculate = this.calculateRoomSettlement(room, transactions);
 
             const settlementHistory = new SettlementHistory();
@@ -74,6 +80,8 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
         }
     }
 
+    public updateSettlement() {}
+
     private calculateRoomSettlement(room: Room, transactions: Transaction[]) {
         let totalAmount = 0;
         const details = room.members.reduce((acc, memberId) => {
@@ -92,12 +100,12 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
                 details[payerId].totalPaid += transaction.amount;
             }
 
-            const totalSplit = transaction.split.reduce((curr, val) => curr + val.ratio, 0);
+            const totalRatio = transaction.split.reduce((curr, val) => curr + val.ratio, 0);
             transaction.split.forEach((splitDetail) => {
                 const userId = splitDetail.userId.toString();
                 if (details[userId]) {
                     details[userId].totalPurchased +=
-                        (transaction.amount * splitDetail.ratio) / totalSplit;
+                        (transaction.amount * splitDetail.ratio) / totalRatio;
                 }
             });
         });

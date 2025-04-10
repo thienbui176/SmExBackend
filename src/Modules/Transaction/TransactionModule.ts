@@ -10,6 +10,7 @@ import TransactionHistory, { TransactionHistorySchema } from './Entity/Transacti
 import SettlementService from './Services/SettlementService';
 import SettlementHistory, { SettlementHistorySchema } from './Entity/SettlementHistory';
 import TransactionHistoryService from './Services/TransactionHistoryService';
+import SettlementController from './SettlementController';
 
 @Module({
     imports: [
@@ -21,7 +22,7 @@ import TransactionHistoryService from './Services/TransactionHistoryService';
         RoomModule,
         UserModule,
     ],
-    controllers: [TransactionController],
+    controllers: [TransactionController, SettlementController],
     providers: [TransactionService, TransactionHistoryService, RoomService, SettlementService],
     exports: [TransactionService, MongooseModule],
 })

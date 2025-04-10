@@ -26,6 +26,18 @@ const calculateDateDiffInDays = (from: Date, to: Date): number => {
     return diffInMs / MS_PER_DAY;
 };
 
-const transformOrderByToNumber = (orderBy: ORDER_BY) => orderBy === ORDER_BY.ASC ? 1 : -1
+const convertDateToDDMMYYYY = (date: Date) => {
+    return date.getDay() + '-' + date.getMonth() + '-' + date.getFullYear();
+};
 
-export { getUserIdFromRequest, calculateDateDiffInDays, transformOrderByToNumber };
+const convertDateToYYYYMMDD = (date: Date) => date.toString().slice(0, 9);
+
+const transformOrderByToNumber = (orderBy: ORDER_BY) => (orderBy === ORDER_BY.ASC ? 1 : -1);
+
+export {
+    getUserIdFromRequest,
+    calculateDateDiffInDays,
+    transformOrderByToNumber,
+    convertDateToDDMMYYYY,
+    convertDateToYYYYMMDD,
+};

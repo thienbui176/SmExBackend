@@ -3,6 +3,11 @@ import { HydratedDocument, Types } from 'mongoose';
 import { User } from 'src/Modules/User/Entity/User';
 
 export type SettlementHistoryDocument = HydratedDocument<SettlementHistory>;
+export enum SETTLEMENT_PAYMENT_STATUS {
+    'NO_ONE_PAID' = 'NO_ONE_PAID',
+    'PAID_IN_PART' = 'PAID_IN_PART',
+    'PAID_IN_FULL' = 'PAID_IN_FULL',
+}
 
 export class SettlementDetail {
     @Prop({ ref: User.name, type: Types.ObjectId, required: true })
@@ -34,6 +39,12 @@ export default class SettlementHistory {
 
     @Prop({ type: Number, required: true })
     totalAmount: number;
+
+    @Prop({ type: [String], default: [] })
+    billPhotos: string;
+
+    @Prop({ enum: SETTLEMENT_PAYMENT_STATUS, default: SETTLEMENT_PAYMENT_STATUS.NO_ONE_PAID })
+    paymentStatus: SETTLEMENT_PAYMENT_STATUS;
 
     @Prop({
         type: [SettlementDetail],
