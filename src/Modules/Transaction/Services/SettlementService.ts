@@ -93,6 +93,13 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
             return acc;
         }, {});
 
+        /**
+         * 1. Loop qua toàn bộ transaction
+         * 2. Mỗi transaction tính cộng dồn amount
+         * 3. Tính totalPaid (Số tiền đã trả) cho từng payerId của transaction
+         * 4. Tính tổng tỉ lệ (ví dụ 1 1 1 1 = 4)
+         * 5. loop qua mảng split và tính tiền đã tiêu của từng thành viên với công thức (transaction.amount*transaction.ratio)/totalRatio (Mục 4)
+         */
         transactions.forEach((transaction) => {
             totalAmount += transaction.amount;
             const payerId = transaction.paidBy.toString();
