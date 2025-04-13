@@ -23,11 +23,7 @@ export class AuthUserService extends BaseService {
     private userService: UserService;
     private tokenService: TokenService;
     private mailService: MailService;
-    constructor(
-        userService: UserService,
-        tokenService: TokenService,
-        mailService: MailService,
-    ) {
+    constructor(userService: UserService, tokenService: TokenService, mailService: MailService) {
         super();
         this.userService = userService;
         this.tokenService = tokenService;
@@ -37,7 +33,7 @@ export class AuthUserService extends BaseService {
     public async login(loginRequest: UserLoginRequest) {
         try {
             this.logger.log(loginRequest.email + 'Log Login Request');
-            const user = await this.userService.findByEmail(loginRequest.email);
+            const user = await this.userService.findByEmailHavePassword(loginRequest.email);
             if (!user) throw new UnauthorizedException(Messages.MSG_001);
             if (!(await bcrypt.compare(loginRequest.password, user.password)))
                 throw new UnauthorizedException(Messages.MSG_001);
@@ -56,8 +52,7 @@ export class AuthUserService extends BaseService {
                 email: user.email,
             };
             const accessToken = this.tokenService.generateAccessToken(payload);
-            const refreshToken =
-                this.tokenService.generateRefreshToken(payload);
+            const refreshToken = this.tokenService.generateRefreshToken(payload);
 
             return {
                 accessToken,
@@ -73,14 +68,9 @@ export class AuthUserService extends BaseService {
     public async register(registerRequest: UserRegisterRequest) {
         try {
             this.logger.log(JSON.stringify(registerRequest));
-            const user = await this.userService.findByEmail(
-                registerRequest.email,
-            );
+            const user = await this.userService.findByEmail(registerRequest.email);
             if (user) throw new ConflictException(Messages.MSG_002);
-            const passwordHashed = await bcrypt.hash(
-                registerRequest.password,
-                10,
-            );
+            const passwordHashed = await bcrypt.hash(registerRequest.password, 10);
             const userRegister = new User();
             userRegister.email = registerRequest.email;
             userRegister.password = passwordHashed;
@@ -102,15 +92,8 @@ export class AuthUserService extends BaseService {
         }
     }
 
-    public async verifyEmail(
-        verifyEmailRequest: UserVerifyEmailRequest,
-    ): Promise<void> {
-        if (
-            !this.tokenService.validateToken(
-                verifyEmailRequest.token,
-                'verifyEmail',
-            )
-        )
+    public async verifyEmail(verifyEmailRequest: UserVerifyEmailRequest): Promise<void> {
+        if (!this.tokenService.validateToken(verifyEmailRequest.token, 'verifyEmail'))
             throw new ForbiddenException(Messages.MSG_007);
 
         const email = this.tokenService.getEmail(verifyEmailRequest.token);
@@ -123,8 +106,7 @@ export class AuthUserService extends BaseService {
     }
 
     private async sendMailVerifyUser(email: string) {
-        const tokenVerifyEmail =
-            this.tokenService.generateVerifyEmailToken(email);
+        const tokenVerifyEmail = this.tokenService.generateVerifyEmailToken(email);
         const verifyUrl = `localhost:3000/auth/user/verify-email?token=${tokenVerifyEmail}`;
 
         const html = `
@@ -142,10 +124,6 @@ export class AuthUserService extends BaseService {
           </div>
         `;
 
-        await this.mailService.sendMail(
-            email,
-            'Xác thực tài khoản qua Email',
-            html,
-        );
+        await this.mailService.sendMail(email, 'Xác thực tài khoản qua Email', html);
     }
 }

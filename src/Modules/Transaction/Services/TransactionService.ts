@@ -15,11 +15,18 @@ import Messages from 'src/Core/Messages/Messages';
 import GetTransactionsOfRoomRequest, {
     TRANSACTION_SORT_BY,
 } from '../Request/GetTransactionOfRoomRequest';
-import { calculateDateDiffInDays, transformOrderByToNumber } from 'src/Core/Utils/Helpers';
+import {
+    arrayToMapByKey,
+    calculateDateDiffInDays,
+    checkElementInArrayObjectId,
+    transformOrderByToNumber,
+} from 'src/Core/Utils/Helpers';
 import { Room } from '../../Room/Entity/Room';
 import UpdateTransactionRequest from '../Request/UpdateTransactionRequest';
 import TransactionHistoryService from './TransactionHistoryService';
 import { TRANSACTION_HISTORY_ACTION } from '../Entity/TransactionHistory';
+import { User } from 'src/Modules/User/Entity/User';
+import { UserService } from 'src/Modules/User/UserService';
 
 @Injectable()
 export default class TransactionService extends AbstractCrudService<Transaction> {
@@ -28,6 +35,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         protected readonly repository: Model<Transaction>,
         private readonly roomService: RoomService,
         private readonly transactionHistoryService: TransactionHistoryService,
+        private readonly userService: UserService,
     ) {
         super(repository);
     }
@@ -88,7 +96,14 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         getTransactionOfRoomRequest: GetTransactionsOfRoomRequest,
     ) {
         try {
-            await this.validateGetTransactionOfRoom(roomId, getTransactionOfRoomRequest);
+            const room = await this.roomService.findById(roomId);
+            this.validateGetTransactionOfRoom(room, getTransactionOfRoomRequest);
+            const _userService = this.userService;
+            const usersOfRoom = await Promise.all(
+                room.members.map(async function (memberId) {
+                    return await _userService.findById(memberId.toString());
+                }),
+            );
 
             const conditionGetTransactionOfRoom: RootFilterQuery<Transaction> = {
                 roomId: new Types.ObjectId(roomId),
@@ -112,7 +127,18 @@ export default class TransactionService extends AbstractCrudService<Transaction>
                 .find(conditionGetTransactionOfRoom)
                 .sort(sortArgs)
                 .lean();
-            return transactions;
+            const membersObject: { [key: string]: User } = arrayToMapByKey(usersOfRoom, '_id');
+            return transactions.map((transaction) => ({
+                ...transaction,
+                paidBy: membersObject[transaction.paidBy.toString()]?.profile,
+                createdAt: membersObject[transaction.createdBy.toString()]?.profile,
+                split: transaction.split.map((s) => {
+                    return {
+                        ...s,
+                        userInfo: membersObject[s.userId.toString()]?.profile,
+                    };
+                }),
+            }));
         } catch (error) {
             this.logger.error(error);
             throw error;
@@ -210,11 +236,10 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         }
     }
 
-    private async validateGetTransactionOfRoom(
-        roomId: string,
+    private validateGetTransactionOfRoom(
+        room: Room | null,
         getTransactionOfRoomRequest: GetTransactionsOfRoomRequest,
-    ) {
-        const room = await this.roomService.findById(roomId);
+    ): asserts room is Room {
         if (!room) throw new NotFoundException(Messages.MSG_015);
 
         const days = calculateDateDiffInDays(
@@ -234,14 +259,16 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         updateTransactionRequest: UpdateTransactionRequest,
         requesterUserId: string,
     ) {
-        await this.validateTransactionAndRoom(transaction, room, requesterUserId);
+        this.validateTransactionAndRoom(transaction, room, requesterUserId);
 
-        if (!room?.members.includes(new Types.ObjectId(updateTransactionRequest.paidBy)))
-            throw new BadGatewayException('Người thanh toán không tồn tại trong phòng.');
+        if (updateTransactionRequest.paidBy) {
+            if (!checkElementInArrayObjectId(room.members, updateTransactionRequest.paidBy))
+                throw new BadGatewayException('Người thanh toán không tồn tại trong phòng.');
+        }
 
         if (updateTransactionRequest.split) {
             updateTransactionRequest.split.forEach((val) => {
-                if (!room.members.includes(new Types.ObjectId(val.userId)))
+                if (!checkElementInArrayObjectId(room.members, val.userId))
                     throw new NotFoundException('Người được chia tiền không tồn tại trong phòng.');
             });
         }
@@ -253,11 +280,11 @@ export default class TransactionService extends AbstractCrudService<Transaction>
      * @param room
      * @param requesterUserId
      */
-    private async validateTransactionAndRoom(
+    private validateTransactionAndRoom(
         transaction: Transaction | null,
         room: Room | null,
         requesterUserId: string,
-    ) {
+    ): asserts room is Room {
         /**
          * 1. Kiểm tra giao dịch có tồn tại không
          * 2. Kiểm tra phòng có tồn tại không
@@ -267,7 +294,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         if (!transaction) throw new NotFoundException(Messages.MSG_TSS_004);
         if (!room) throw new NotFoundException(Messages.MSG_015);
 
-        if (!room.members.includes(new Types.ObjectId(requesterUserId)))
+        if (!checkElementInArrayObjectId(room.members, requesterUserId))
             throw new ForbiddenException(Messages.MSG_030);
 
         if (transaction.roomId.toString() !== room['_id'])
@@ -288,15 +315,15 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         const room = await this.roomService.findById(roomId);
         if (!room) throw new NotFoundException(Messages.MSG_015);
 
-        if (!room.members.includes(new Types.ObjectId(creatorId)))
-            throw new BadGatewayException(Messages.MSG_030);
+        if (!checkElementInArrayObjectId(room.members, creatorId))
+            throw new BadRequestException(Messages.MSG_030);
 
-        if (!room.members.includes(new Types.ObjectId(createTransactionRequest.paidBy)))
-            throw new BadGatewayException('Người thanh toán không tồn tại trong phòng.');
+        if (!checkElementInArrayObjectId(room.members, createTransactionRequest.paidBy))
+            throw new BadRequestException('Người thanh toán không tồn tại trong phòng.');
 
         /** Kiểm tra user trong split có tồn tại trong phòng hay không */
         createTransactionRequest.split.forEach((val) => {
-            if (!room.members.includes(new Types.ObjectId(val.userId)))
+            if (!checkElementInArrayObjectId(room.members, val.userId))
                 throw new NotFoundException('Người được chia tiền không tồn tại trong phòng.');
         });
     }

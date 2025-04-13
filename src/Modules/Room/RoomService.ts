@@ -16,6 +16,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { PaginationRequest } from 'src/Core/Request/PaginationRequest';
 import InviteMemberRequest from './Request/InviteMemberRequest';
 import UpdateRoomRequest from './Request/UpdateRoomRequest';
+import { checkElementInArrayObjectId } from 'src/Core/Utils/Helpers';
 
 @Injectable()
 export default class RoomService extends AbstractCrudService<Room> {
@@ -127,7 +128,7 @@ export default class RoomService extends AbstractCrudService<Room> {
             if (room.hostId !== new Types.ObjectId(requesterUserId))
                 throw new ForbiddenException(Messages.MSG_029);
 
-            if (!room.members.includes(new Types.ObjectId(memberIdRemove)))
+            if (!checkElementInArrayObjectId(room.members, memberIdRemove))
                 throw new ForbiddenException(Messages.MSG_025);
 
             /** Kiểm tra xem member bị xoá có còn nợ hay không? */
@@ -182,10 +183,36 @@ export default class RoomService extends AbstractCrudService<Room> {
             const room = await this.repository.findById(roomId).lean();
             if (!room) throw new NotFoundException(Messages.MSG_015);
 
-            if (!room.members.includes(new Types.ObjectId(userId)))
+            if (!checkElementInArrayObjectId(room.members, userId))
                 throw new ForbiddenException(Messages.MSG_025);
 
-            return this.repository.findById(roomId).lean();
+            return room;
+        } catch (error) {
+            this.logger.error(error);
+            throw error;
+        }
+    }
+
+    /**
+     *
+     * @param roomId
+     * @param userId
+     * @returns
+     */
+    public async getDetailRoomById(roomId: string, userId: string) {
+        try {
+            const room = await this.repository
+                .findById(roomId)
+                .populate('hostId', 'profile')
+                .populate('members', 'profile')
+                .lean();
+
+            if (!room) throw new NotFoundException(Messages.MSG_015);
+            if (!room.members.some((user) => user._id.toString() === userId)) {
+                throw new ForbiddenException(Messages.MSG_025);
+            }
+
+            return room;
         } catch (error) {
             this.logger.error(error);
             throw error;
@@ -233,7 +260,7 @@ export default class RoomService extends AbstractCrudService<Room> {
         if (!newHost) throw new NotFoundException('Người được sang quyền chủ phòng không tồn tại.');
         if (room.hostId.toString() !== requesterUserId)
             throw new ForbiddenException(Messages.MSG_029);
-        if (!room.members.includes(new Types.ObjectId(newHostId))) {
+        if (!checkElementInArrayObjectId(room.members, newHostId)) {
             throw new BadRequestException(
                 'Người được sang quyền chủ phòng không phải là thành viên.',
             );
@@ -265,7 +292,7 @@ export default class RoomService extends AbstractCrudService<Room> {
         /**
          * Chỉ kiểm tra là thành viên trong phòng thì mới có quyền thêm thành viên khác vào phòng
          * Có thể xử lí chỉ chủ phòng mới có quyền thêm người khác vào phòng */
-        if (room.members.includes(new Types.ObjectId(requesterUserId)))
+        if (!checkElementInArrayObjectId(room.members, requesterUserId))
             throw new ForbiddenException(Messages.MSG_023);
 
         if (
@@ -277,7 +304,7 @@ export default class RoomService extends AbstractCrudService<Room> {
             inviteMemberRequest.invitees.map(async (memberId) => {
                 const user = await this.userService.findById(memberId);
                 if (!user) throw new BadRequestException(Messages.MSG_011);
-                if (room.members.includes(new Types.ObjectId(memberId)))
+                if (checkElementInArrayObjectId(room.members, memberId))
                     throw new BadRequestException(Messages.MSG_022);
             }),
         );

@@ -16,7 +16,7 @@ export class User extends BaseEntity {
     @Prop({ unique: true, required: true })
     email: string;
 
-    @Prop({ minlength: 6, maxlength: 522, required: true })
+    @Prop({ minlength: 6, maxlength: 522, required: true, select: false })
     password: string;
 
     @Prop({ enum: USER_STATUS, default: USER_STATUS.ACTIVE })

@@ -9,7 +9,11 @@ import TransactionService from './TransactionService';
 import SettlementTransactionRequest from '../Request/SettlementTransactionRequest';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UserService } from 'src/Modules/User/UserService';
-import { calculateDateDiffInDays, convertDateToDDMMYYYY } from 'src/Core/Utils/Helpers';
+import {
+    calculateDateDiffInDays,
+    checkElementInArrayObjectId,
+    convertDateToDDMMYYYY,
+} from 'src/Core/Utils/Helpers';
 
 export default class SettlementService extends AbstractCrudService<SettlementHistory> {
     constructor(
@@ -129,7 +133,7 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
         settlementTransactionRequest: SettlementTransactionRequest,
     ): asserts room is Room {
         if (!room) throw new NotFoundException('Phòng không tồn tại.');
-        if (!room.members.includes(new Types.ObjectId(requesterUserId)))
+        if (!checkElementInArrayObjectId(room.members, requesterUserId))
             throw new BadRequestException(
                 'Người tạo quyết toán không phải là thành viên trong phòng.',
             );
