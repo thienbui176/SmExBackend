@@ -38,7 +38,7 @@ export class Transaction extends BaseEntity {
     @Prop({
         type: [
             {
-                userId: { ref: User.name, type: Types.ObjectId, required: true },
+                user: { ref: User.name, type: Types.ObjectId, required: true },
                 ratio: { type: Number, required: true, min: 0 },
                 share: { type: Number, required: true, min: 0 },
             },
@@ -46,7 +46,7 @@ export class Transaction extends BaseEntity {
         required: true,
     })
     split: {
-        userId: Types.ObjectId;
+        user: Types.ObjectId;
         ratio: number;
         share: number;
     }[];

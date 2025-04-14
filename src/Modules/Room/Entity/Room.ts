@@ -17,7 +17,7 @@ export class Room {
     members: Types.ObjectId[];
 
     @Prop({ ref: User.name, type: Types.ObjectId, required: true })
-    hostId: Types.ObjectId;
+    host: Types.ObjectId;
 
     @Prop({ type: RoomSettings, ref: RoomSettings.name })
     settings: RoomSettings;

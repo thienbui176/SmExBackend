@@ -65,7 +65,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
 
             transaction.split = createTransactionRequest.split.map((val) => ({
                 ...val,
-                userId: new Types.ObjectId(val.userId),
+                user: new Types.ObjectId(val.userId),
             }));
 
             const transactionCreated = await this.repository.create(transaction);
@@ -73,7 +73,9 @@ export default class TransactionService extends AbstractCrudService<Transaction>
                 // Lưu lại lịch sử của giao dịch
                 this.transactionHistoryService.create({
                     action: TRANSACTION_HISTORY_ACTION.CREATE,
-                    newValue: JSON.stringify(transactionCreated),
+                    newValue: JSON.stringify(
+                        await transactionCreated.populate('paidBy createdBy split.user'),
+                    ),
                     changedBy: new Types.ObjectId(creatorId),
                     transactionId: transactionCreated._id,
                 });
@@ -107,11 +109,17 @@ export default class TransactionService extends AbstractCrudService<Transaction>
 
             const conditionGetTransactionOfRoom: RootFilterQuery<Transaction> = {
                 roomId: new Types.ObjectId(roomId),
-                dateOfPurchase: {
+            };
+
+            if (getTransactionOfRoomRequest.allUnpaidTransactions) {
+                conditionGetTransactionOfRoom.settlementId = { $eq: null };
+            } else {
+                conditionGetTransactionOfRoom.dateOfPurchase = {
                     $gte: new Date(getTransactionOfRoomRequest.from),
                     $lte: new Date(getTransactionOfRoomRequest.to),
-                },
-            };
+                };
+            }
+
             const sortArgs = {};
             const orderBy = transformOrderByToNumber(getTransactionOfRoomRequest.orderBy);
             switch (getTransactionOfRoomRequest.sortBy) {
@@ -135,7 +143,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
                 split: transaction.split.map((s) => {
                     return {
                         ...s,
-                        userInfo: membersObject[s.userId.toString()]?.profile,
+                        userInfo: membersObject[s.user.toString()]?.profile,
                     };
                 }),
             }));
@@ -198,7 +206,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
                 this.roomService.findById(roomId),
             ]);
 
-            await this.validateUpdateTransaction(
+            this.validateUpdateTransaction(
                 transaction,
                 room,
                 updateTransactionRequest,
@@ -209,7 +217,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
             if (updateTransactionRequest.split) {
                 splitConvertedUserIdToObjectId = updateTransactionRequest.split.map((val) => ({
                     ...val,
-                    userId: new Types.ObjectId(val.userId),
+                    user: new Types.ObjectId(val.userId),
                 }));
             }
 
@@ -224,12 +232,15 @@ export default class TransactionService extends AbstractCrudService<Transaction>
                     changedBy: new Types.ObjectId(requesterUserId),
                     action: TRANSACTION_HISTORY_ACTION.UPDATE,
                     transactionId: new Types.ObjectId(transactionId),
-                    oldValue: JSON.stringify(transaction),
-                    newValue: JSON.stringify(updateTransactionRequest),
+                    oldValue: JSON.stringify(
+                        transaction && transaction.populate('paidBy createdBy split.user'),
+                    ),
+                    newValue: JSON.stringify(
+                        transactionUpdated.populate('paidBy createdBy split.user'),
+                    ),
                 });
+                return transactionUpdated.populate('paidBy createdBy split.user');
             }
-
-            return transactionUpdated;
         } catch (error) {
             this.logger.error(error);
             throw error;
@@ -242,23 +253,25 @@ export default class TransactionService extends AbstractCrudService<Transaction>
     ): asserts room is Room {
         if (!room) throw new NotFoundException(Messages.MSG_015);
 
-        const days = calculateDateDiffInDays(
-            getTransactionOfRoomRequest.from,
-            getTransactionOfRoomRequest.to,
-        );
-        if (days < 0)
-            throw new BadRequestException('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc');
+        if (!getTransactionOfRoomRequest.allUnpaidTransactions) {
+            const days = calculateDateDiffInDays(
+                getTransactionOfRoomRequest.from,
+                getTransactionOfRoomRequest.to,
+            );
+            if (days < 0)
+                throw new BadRequestException('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc');
 
-        if (days > 31)
-            throw new BadRequestException('Khoảng thời gian không được vượt quá 1 tháng');
+            if (days > 31)
+                throw new BadRequestException('Khoảng thời gian không được vượt quá 1 tháng');
+        }
     }
 
-    private async validateUpdateTransaction(
+    private validateUpdateTransaction(
         transaction: Transaction | null,
         room: Room | null,
         updateTransactionRequest: UpdateTransactionRequest,
         requesterUserId: string,
-    ) {
+    ): asserts room is Room {
         this.validateTransactionAndRoom(transaction, room, requesterUserId);
 
         if (updateTransactionRequest.paidBy) {
@@ -285,6 +298,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         room: Room | null,
         requesterUserId: string,
     ): asserts room is Room {
+        console.log(transaction);
         /**
          * 1. Kiểm tra giao dịch có tồn tại không
          * 2. Kiểm tra phòng có tồn tại không
@@ -297,7 +311,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         if (!checkElementInArrayObjectId(room.members, requesterUserId))
             throw new ForbiddenException(Messages.MSG_030);
 
-        if (transaction.roomId.toString() !== room['_id'])
+        if (transaction.roomId.toString() != room['_id'])
             throw new BadRequestException(Messages.MSG_TSS_005);
     }
 

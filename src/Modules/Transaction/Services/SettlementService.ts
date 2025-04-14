@@ -25,39 +25,33 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
         super(repository);
     }
 
-    public async createSettlementTransaction(
-        requesterUserId: string,
-        roomId: string,
-        settlementTransactionRequest: SettlementTransactionRequest,
-    ) {
+    public async createSettlementTransaction(requesterUserId: string, roomId: string) {
         try {
             const room = await this.roomService.findById(roomId);
-            this.validateCreateSettlementTransaction(
-                requesterUserId,
-                room,
-                settlementTransactionRequest,
-            );
+            this.validateCreateSettlementTransaction(requesterUserId, room);
+            const startDate = room.finalSettlementDate;
+            const endDate = new Date();
             const transactions = await this.transactionService.findAll({
                 // Chỉ thực hiện tính cho những giao dịch chưa được tính.
                 settlementId: { $eq: null },
                 roomId: new Types.ObjectId(roomId),
                 dateOfPurchase: {
-                    $gte: new Date(settlementTransactionRequest.from),
-                    $lte: new Date(settlementTransactionRequest.to),
+                    $gte: new Date(startDate),
+                    $lte: new Date(endDate),
                 },
             });
 
             if (!transactions.length)
                 throw new NotFoundException(
-                    `Không có giao dịch nào trong khoảng thời gian từ ${convertDateToDDMMYYYY(settlementTransactionRequest.from)} đến ${convertDateToDDMMYYYY(settlementTransactionRequest.to)}`,
+                    `Không có giao dịch nào trong khoảng thời gian từ ${convertDateToDDMMYYYY(startDate)} đến ${convertDateToDDMMYYYY(endDate)}`,
                 );
 
             const detailsAfterCalculate = this.calculateRoomSettlement(room, transactions);
 
             const settlementHistory = new SettlementHistory();
             const settlementRequestCreationDate = new Date();
-            settlementHistory.from = settlementTransactionRequest.from;
-            settlementHistory.to = settlementTransactionRequest.to;
+            settlementHistory.from = startDate;
+            settlementHistory.to = endDate;
             settlementHistory.roomId = new Types.ObjectId(roomId);
             settlementHistory.settlementAt = settlementRequestCreationDate;
             settlementHistory.settlementBy = new Types.ObjectId(requesterUserId);
@@ -67,6 +61,9 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
             const _transactionService = this.transactionService;
             const settlementHistoryCreated = await this.repository.create(settlementHistory);
             if (settlementHistoryCreated) {
+                await this.roomService.update(roomId, {
+                    finalSettlementDate: endDate,
+                });
                 // Nên xử lý đẩy vào queue xử lí
                 await Promise.all(
                     transactions.map(async function (transaction) {
@@ -113,7 +110,7 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
 
             const totalRatio = transaction.split.reduce((curr, val) => curr + val.ratio, 0);
             transaction.split.forEach((splitDetail) => {
-                const userId = splitDetail.userId.toString();
+                const userId = splitDetail.user.toString();
                 if (details[userId]) {
                     details[userId].totalPurchased +=
                         (transaction.amount * splitDetail.ratio) / totalRatio;
@@ -130,22 +127,11 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
     private validateCreateSettlementTransaction(
         requesterUserId: string,
         room: Room | null,
-        settlementTransactionRequest: SettlementTransactionRequest,
     ): asserts room is Room {
         if (!room) throw new NotFoundException('Phòng không tồn tại.');
         if (!checkElementInArrayObjectId(room.members, requesterUserId))
             throw new BadRequestException(
                 'Người tạo quyết toán không phải là thành viên trong phòng.',
             );
-
-        const days = calculateDateDiffInDays(
-            settlementTransactionRequest.from,
-            settlementTransactionRequest.to,
-        );
-        if (days < 0)
-            throw new BadRequestException('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.');
-
-        if (days > 365)
-            throw new BadRequestException('Khoảng thời gian không được vượt quá 1 năm.');
     }
 }

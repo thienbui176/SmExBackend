@@ -43,7 +43,7 @@ export default class RoomService extends AbstractCrudService<Room> {
             const room = new Room();
             room.name = createRoomRequest.name;
             room.description = createRoomRequest.description;
-            room.hostId = new Types.ObjectId(creatorId);
+            room.host = new Types.ObjectId(creatorId);
 
             if (createRoomRequest.members) {
                 await this.validateMembers(createRoomRequest.members);
@@ -51,7 +51,9 @@ export default class RoomService extends AbstractCrudService<Room> {
                     (memberId) => new Types.ObjectId(memberId),
                 );
                 /** Thêm chủ phòng vào danh sách thành viên */
-                room.members.push(room.hostId);
+                if (!checkElementInArrayObjectId(room.members, creatorId)) {
+                    room.members.push(room.host);
+                }
             }
 
             const roomCreated = this.repository.create(room);
@@ -80,6 +82,8 @@ export default class RoomService extends AbstractCrudService<Room> {
                     return this.repository
                         .find(conditionGetListMyRoom)
                         .skip(skip)
+                        .populate('host')
+                        .populate('members')
                         .limit(limit)
                         .lean();
                 },
@@ -125,7 +129,7 @@ export default class RoomService extends AbstractCrudService<Room> {
             const room = await this.repository.findById(roomId).lean();
             if (!room) throw new NotFoundException(Messages.MSG_015);
 
-            if (room.hostId !== new Types.ObjectId(requesterUserId))
+            if (room.host !== new Types.ObjectId(requesterUserId))
                 throw new ForbiddenException(Messages.MSG_029);
 
             if (!checkElementInArrayObjectId(room.members, memberIdRemove))
@@ -158,7 +162,7 @@ export default class RoomService extends AbstractCrudService<Room> {
             const room = await this.repository.findById(roomId).lean();
             if (!room) throw new NotFoundException(Messages.MSG_015);
 
-            if (room.hostId !== new Types.ObjectId(requesterUserId))
+            if (room.host !== new Types.ObjectId(requesterUserId))
                 throw new ForbiddenException(Messages.MSG_029);
 
             const roomUpdated = await this.repository.findByIdAndUpdate(roomId, {
@@ -203,7 +207,7 @@ export default class RoomService extends AbstractCrudService<Room> {
         try {
             const room = await this.repository
                 .findById(roomId)
-                .populate('hostId', 'profile')
+                .populate('host', 'profile')
                 .populate('members', 'profile')
                 .lean();
 
@@ -235,7 +239,7 @@ export default class RoomService extends AbstractCrudService<Room> {
             this.validateTransferHost(room, newHost, requesterUserId, newHostId);
 
             const roomUpdated = await this.repository.findByIdAndUpdate(roomId, {
-                hostId: newHostId,
+                host: newHostId,
             });
             return roomUpdated;
         } catch (error) {
@@ -258,7 +262,7 @@ export default class RoomService extends AbstractCrudService<Room> {
     ) {
         if (!room) throw new NotFoundException(Messages.MSG_015);
         if (!newHost) throw new NotFoundException('Người được sang quyền chủ phòng không tồn tại.');
-        if (room.hostId.toString() !== requesterUserId)
+        if (room.host.toString() !== requesterUserId)
             throw new ForbiddenException(Messages.MSG_029);
         if (!checkElementInArrayObjectId(room.members, newHostId)) {
             throw new BadRequestException(

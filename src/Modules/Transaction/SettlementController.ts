@@ -7,7 +7,9 @@ import { IsMongoIdParam } from 'src/Core/Validations/IsMongoIdParam';
 import SettlementTransactionRequest from './Request/SettlementTransactionRequest';
 import { getUserIdFromRequest } from 'src/Core/Utils/Helpers';
 import { Request } from 'express';
+import { ApiBearerAuth } from '@nestjs/swagger';
 
+@ApiBearerAuth('jwt-access-token')
 @Controller('/:roomId/settlement')
 export default class SettlementController extends BaseController {
     constructor(private readonly settlementService: SettlementService) {
@@ -20,12 +22,10 @@ export default class SettlementController extends BaseController {
     public async settlementTransaction(
         @Req() request: Request,
         @Param('roomId', IsMongoIdParam) roomId: string,
-        @Body() settlementTransactionRequest: SettlementTransactionRequest,
     ) {
         return this.settlementService.createSettlementTransaction(
             getUserIdFromRequest(request),
             roomId,
-            settlementTransactionRequest,
         );
     }
 }

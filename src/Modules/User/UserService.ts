@@ -3,7 +3,7 @@ import { User } from './Entity/User';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, RootFilterQuery } from 'mongoose';
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PaginationRequest } from 'src/Core/Request/PaginationRequest';
+import SearchUserByEmailRequest from './Request/SearchUserRequest';
 
 @Injectable()
 export class UserService extends AbstractCrudService<User> {
@@ -16,6 +16,16 @@ export class UserService extends AbstractCrudService<User> {
         if (!user) throw new NotFoundException('Thông tin người dùng không tồn tại.');
         const { password, ...result } = user;
         return result;
+    }
+
+    public async searchUser(searchUserRequest: SearchUserByEmailRequest) {
+        const filter: RootFilterQuery<User> = {};
+        if (searchUserRequest.email) {
+            filter.email = searchUserRequest.email;
+        }
+
+        const user = await this.repository.find(filter).lean();
+        return user;
     }
 
     public async findByEmail(email: string) {
