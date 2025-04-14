@@ -4,6 +4,7 @@ import {
     ForbiddenException,
     Injectable,
     InternalServerErrorException,
+    NotFoundException,
     UnauthorizedException,
 } from '@nestjs/common';
 import BaseService from 'src/Core/Base/BaseService';
@@ -17,17 +18,16 @@ import TokenService from 'src/Providers/Token/TokenService';
 import JwtPayload from 'src/Core/Interfaces/JwtPayload';
 import MailService from 'src/Providers/Mailer/MailService';
 import UserVerifyEmailRequest from './Request/User/VerifyEmailRequest';
+import ChangePasswordRequest from './Request/User/ChangePasswordRequest';
+import { TokenPayload } from 'src/Providers/Token/Interfaces/TokenPayload';
 
 @Injectable()
 export class AuthUserService extends BaseService {
     private userService: UserService;
     private tokenService: TokenService;
     private mailService: MailService;
-    constructor(
-        userService: UserService,
-        tokenService: TokenService,
-        mailService: MailService,
-    ) {
+    TYPE_REQUEST_CHANGE_PASSWORD = 'REQUEST_CHANGE_PASSWORD';
+    constructor(userService: UserService, tokenService: TokenService, mailService: MailService) {
         super();
         this.userService = userService;
         this.tokenService = tokenService;
@@ -56,8 +56,7 @@ export class AuthUserService extends BaseService {
                 email: user.email,
             };
             const accessToken = this.tokenService.generateAccessToken(payload);
-            const refreshToken =
-                this.tokenService.generateRefreshToken(payload);
+            const refreshToken = this.tokenService.generateRefreshToken(payload);
 
             return {
                 accessToken,
@@ -73,14 +72,9 @@ export class AuthUserService extends BaseService {
     public async register(registerRequest: UserRegisterRequest) {
         try {
             this.logger.log(JSON.stringify(registerRequest));
-            const user = await this.userService.findByEmail(
-                registerRequest.email,
-            );
+            const user = await this.userService.findByEmail(registerRequest.email);
             if (user) throw new ConflictException(Messages.MSG_002);
-            const passwordHashed = await bcrypt.hash(
-                registerRequest.password,
-                10,
-            );
+            const passwordHashed = await bcrypt.hash(registerRequest.password, 10);
             const userRegister = new User();
             userRegister.email = registerRequest.email;
             userRegister.password = passwordHashed;
@@ -92,7 +86,10 @@ export class AuthUserService extends BaseService {
             const userCreated = await this.userService.create(userRegister);
             if (userCreated) {
                 // Handle send mail veriry account
-                await this.sendMailVerifyUser(userCreated.email);
+                const tokenVerifyEmail = this.tokenService.generateVerifyEmailToken(
+                    registerRequest.email,
+                );
+                await this.sendMailVerifyUser(userCreated.email, tokenVerifyEmail);
             }
             return;
         } catch (error) {
@@ -102,15 +99,8 @@ export class AuthUserService extends BaseService {
         }
     }
 
-    public async verifyEmail(
-        verifyEmailRequest: UserVerifyEmailRequest,
-    ): Promise<void> {
-        if (
-            !this.tokenService.validateToken(
-                verifyEmailRequest.token,
-                'verifyEmail',
-            )
-        )
+    public async verifyEmail(verifyEmailRequest: UserVerifyEmailRequest): Promise<void> {
+        if (!this.tokenService.validateToken(verifyEmailRequest.token, 'verifyEmail'))
             throw new ForbiddenException(Messages.MSG_007);
 
         const email = this.tokenService.getEmail(verifyEmailRequest.token);
@@ -122,9 +112,40 @@ export class AuthUserService extends BaseService {
         return;
     }
 
-    private async sendMailVerifyUser(email: string) {
-        const tokenVerifyEmail =
-            this.tokenService.generateVerifyEmailToken(email);
+    public async requestChangePassword(email: string) {
+        const user = await this.userService.findByEmail(email);
+        if (!user) throw new NotFoundException('Email này chưa được đăng ký.');
+
+        const tokenChangePassword = this.tokenService.generateToken<
+            TokenPayload<{ email: string }>
+        >({ type: this.TYPE_REQUEST_CHANGE_PASSWORD, subject: { email } }, '10m');
+
+        await this.sendMailChangePassword(email, tokenChangePassword);
+    }
+
+    public async changePassword(token: string, changePasswordRequest: ChangePasswordRequest) {
+        try {
+            if (!this.tokenService.validateToken(token, 'token'))
+                throw new ForbiddenException(Messages.MSG_007);
+            const { subject, type } =
+                this.tokenService.decodeToken<TokenPayload<{ email: string }>>(token);
+            if (type !== this.TYPE_REQUEST_CHANGE_PASSWORD)
+                throw new ForbiddenException('Token không tồn tại.');
+            const email = subject.email;
+            const user = await this.userService.findByEmail(email);
+            if (!user) throw new NotFoundException('Email này chưa được đăng ký.');
+            if (!(await bcrypt.compare(user.password, changePasswordRequest.oldPassword)))
+                throw new UnauthorizedException('Mật khẩu cũ không đúng. ');
+
+            const passwordHashed = await bcrypt.hash(changePasswordRequest.newPassword, 10);
+            await this.userService.update(user._id.toString(), { password: passwordHashed });
+        } catch (error) {
+            this.logger.error(error);
+            throw error;
+        }
+    }
+
+    private async sendMailVerifyUser(email: string, tokenVerifyEmail: string) {
         const verifyUrl = `localhost:3000/auth/user/verify-email?token=${tokenVerifyEmail}`;
 
         const html = `
@@ -142,10 +163,27 @@ export class AuthUserService extends BaseService {
           </div>
         `;
 
-        await this.mailService.sendMail(
-            email,
-            'Xác thực tài khoản qua Email',
-            html,
-        );
+        await this.mailService.sendMail(email, 'Xác thực tài khoản qua Email', html);
+    }
+
+    private async sendMailChangePassword(email: string, tokenChangePassword: string) {
+        const changePasswordUrl = `localhost:3000/auth/change-password?token=${tokenChangePassword}`;
+
+        const html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+            <h2 style="color: #333;">Đổi mật khẩu của bạn</h2>
+            <p>Chào <strong>${email}</strong>,</p>
+             <p>Chúng tôi đã nhận được yêu cầu đổi mật khẩu cho tài khoản của bạn. Vui lòng nhấn vào nút bên dưới để đổi mật khẩu:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${changePasswordUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
+                Đổi mật khẩu
+              </a>
+            </div>
+            <p>Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này.</p>
+            <p>Trân trọng,<br/>Đội ngũ hỗ trợ</p>
+          </div>
+        `;
+
+        await this.mailService.sendMail(email, 'Đổi mật khẩu tài khoản', html);
     }
 }

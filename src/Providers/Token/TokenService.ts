@@ -1,7 +1,7 @@
 import JwtPayload from 'src/Core/Interfaces/JwtPayload';
 import ITokenService from './Interfaces/ITokenService';
 import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+import { JwtService, JwtSignOptions } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 
 @Injectable()
@@ -16,15 +16,9 @@ export default class TokenService implements ITokenService {
         private readonly jwtService: JwtService,
         private readonly configService: ConfigService,
     ) {
-        this.ACCESS_TOKEN_SECRET = this.configService.getOrThrow(
-            'ACCESS_TOKEN_SECRET',
-        );
-        this.REFRESH_TOKEN_SECRET = this.configService.getOrThrow(
-            'REFRESH_TOKEN_SECRET',
-        );
-        this.TOKEN_VERIFY_EMAIL_SECRET = this.configService.getOrThrow(
-            'TOKEN_VERIFY_EMAIL_SECRET',
-        );
+        this.ACCESS_TOKEN_SECRET = this.configService.getOrThrow('ACCESS_TOKEN_SECRET');
+        this.REFRESH_TOKEN_SECRET = this.configService.getOrThrow('REFRESH_TOKEN_SECRET');
+        this.TOKEN_VERIFY_EMAIL_SECRET = this.configService.getOrThrow('TOKEN_VERIFY_EMAIL_SECRET');
     }
 
     generateAccessToken(payload: JwtPayload): string {
@@ -43,7 +37,7 @@ export default class TokenService implements ITokenService {
 
     validateToken(
         token: string,
-        type: 'access' | 'refresh' | 'verifyEmail' = 'access',
+        type: 'access' | 'refresh' | 'verifyEmail' | 'token' = 'access',
     ): boolean {
         try {
             let secret: string;
@@ -57,6 +51,8 @@ export default class TokenService implements ITokenService {
                 case 'verifyEmail':
                     secret = this.TOKEN_VERIFY_EMAIL_SECRET;
                     break;
+                case 'token':
+                    secret = 'token-secret';
                 default:
                     secret = this.ACCESS_TOKEN_SECRET;
             }
@@ -89,5 +85,16 @@ export default class TokenService implements ITokenService {
                 expiresIn: this.TOKEN_VERIFY_EMAIL_EXPIRES_IN,
             },
         );
+    }
+
+    generateToken<TokenPayload>(payload: TokenPayload, expiresIn: string) {
+        return this.jwtService.sign(payload as any, {
+            secret: 'token-secret',
+            expiresIn: expiresIn,
+        });
+    }
+
+    decodeToken<TokenPayload>(token: string) {
+        return this.jwtService.decode<TokenPayload>(token);
     }
 }
