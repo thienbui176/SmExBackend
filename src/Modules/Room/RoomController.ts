@@ -55,6 +55,7 @@ export default class RoomController extends BaseController {
     }
 
     @Post('/:roomId/invite-members')
+    @UseGuards(JwtAccessAuthGuard)
     @ResponseMessage(Messages.MSG_026)
     inviteMember(
         @Req() request: Request,
@@ -66,6 +67,7 @@ export default class RoomController extends BaseController {
     }
 
     @Delete('/:roomId/remove-member')
+    @UseGuards(JwtAccessAuthGuard)
     @ResponseMessage(Messages.MSG_027)
     removeMember(
         @Req() request: Request,
@@ -77,6 +79,7 @@ export default class RoomController extends BaseController {
     }
 
     @Patch('/:roomId')
+    @UseGuards(JwtAccessAuthGuard)
     @ResponseMessage(Messages.MSG_028)
     updateRoom(
         @Req() request: Request,
@@ -87,7 +90,16 @@ export default class RoomController extends BaseController {
         return this.roomService.updateRoom(userId, roomId, updateRoomRequest);
     }
 
+    @Get('/:roomId')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage(Messages.MSG_028)
+    getDetailRoomById(@Req() request: Request, @Param('roomId', IsMongoIdParam) roomId: string) {
+        const userId = getUserIdFromRequest(request);
+        return this.roomService.getDetailRoomById(roomId, userId);
+    }
+
     @Post('/:roomId/transfer-host')
+    @UseGuards(JwtAccessAuthGuard)
     @ResponseMessage('')
     transferHost(
         @Req() request: Request,

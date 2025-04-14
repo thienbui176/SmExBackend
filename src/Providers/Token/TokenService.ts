@@ -9,7 +9,7 @@ export default class TokenService implements ITokenService {
     private ACCESS_TOKEN_SECRET: string;
     private REFRESH_TOKEN_SECRET: string;
     private TOKEN_VERIFY_EMAIL_SECRET: string;
-    private readonly ACCESS_TOKEN_EXPIRES_IN = '1h';
+    private readonly ACCESS_TOKEN_EXPIRES_IN = '1d';
     private readonly REFRESH_TOKEN_EXPIRES_IN = '7d';
     private readonly TOKEN_VERIFY_EMAIL_EXPIRES_IN = '10m';
     constructor(

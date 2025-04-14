@@ -37,7 +37,7 @@ export class AuthUserService extends BaseService {
     public async login(loginRequest: UserLoginRequest) {
         try {
             this.logger.log(loginRequest.email + 'Log Login Request');
-            const user = await this.userService.findByEmail(loginRequest.email);
+            const user = await this.userService.findByEmailHavePassword(loginRequest.email);
             if (!user) throw new UnauthorizedException(Messages.MSG_001);
             if (!(await bcrypt.compare(loginRequest.password, user.password)))
                 throw new UnauthorizedException(Messages.MSG_001);

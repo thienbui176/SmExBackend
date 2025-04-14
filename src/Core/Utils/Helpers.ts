@@ -1,5 +1,6 @@
 import { Request } from 'express';
 import { ORDER_BY } from 'src/Constants/OrderBy';
+import { Model, RootFilterQuery, Types } from 'mongoose';
 
 /**
  * @param request Express request
@@ -34,10 +35,26 @@ const convertDateToYYYYMMDD = (date: Date) => date.toString().slice(0, 9);
 
 const transformOrderByToNumber = (orderBy: ORDER_BY) => (orderBy === ORDER_BY.ASC ? 1 : -1);
 
+function arrayToMapByKey<T>(array: any[], key: string): Record<string, T> {
+    return array.reduce((acc, item) => {
+        const mapKey = item[key];
+        if (mapKey !== undefined && mapKey !== null) {
+            acc[String(mapKey)] = item;
+        }
+        return acc;
+    }, {});
+}
+
+const checkElementInArrayObjectId = (array: Types.ObjectId[], keySearch: string) => {
+    return array.map(String).some((value) => value === keySearch);
+};
+
 export {
     getUserIdFromRequest,
     calculateDateDiffInDays,
     transformOrderByToNumber,
     convertDateToDDMMYYYY,
+    arrayToMapByKey,
     convertDateToYYYYMMDD,
+    checkElementInArrayObjectId,
 };

@@ -18,7 +18,7 @@ export abstract class AbstractCrudService<T> extends BaseService {
     }
 
     async findById(id: string): Promise<T | null> {
-        return this.repository.findById(id).exec();
+        return this.repository.findById(id).lean() as T;
     }
 
     async findAll(condition: RootFilterQuery<T>): Promise<T[]> {

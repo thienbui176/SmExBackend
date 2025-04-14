@@ -19,8 +19,11 @@ export class Room {
     @Prop({ ref: User.name, type: Types.ObjectId, required: true })
     hostId: Types.ObjectId;
 
-    @Prop({ type: RoomSettings, ref: RoomSettings.name, required: true })
+    @Prop({ type: RoomSettings, ref: RoomSettings.name })
     settings: RoomSettings;
+
+    @Prop({ type: Date, default: new Date() })
+    finalSettlementDate: Date;
 }
 
 export const RoomSchema = SchemaFactory.createForClass(Room);
