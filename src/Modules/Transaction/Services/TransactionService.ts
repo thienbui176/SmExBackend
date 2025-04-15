@@ -260,9 +260,6 @@ export default class TransactionService extends AbstractCrudService<Transaction>
             );
             if (days < 0)
                 throw new BadRequestException('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc');
-
-            if (days > 31)
-                throw new BadRequestException('Khoảng thời gian không được vượt quá 1 tháng');
         }
     }
 
