@@ -23,8 +23,10 @@ export default class GetTransactionsOfRoomRequest {
     to: Date;
 
     @ApiProperty({ example: true })
+    @IsNotEmpty()
     @IsBoolean()
-    allUnpaidTransactions: boolean = true;
+    @Transform(({ value }) => value === 'true' || value === true)
+    allUnpaidTransactions: boolean;
 
     @ApiProperty({
         example: TRANSACTION_SORT_BY.dateOfPurchase,

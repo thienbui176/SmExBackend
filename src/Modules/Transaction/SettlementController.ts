@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import BaseController from 'src/Core/Base/BaseController';
 import SettlementService from './Services/SettlementService';
 import { JwtAccessAuthGuard } from '../Auth/Guards/JwtAccessGuard';
@@ -27,5 +27,14 @@ export default class SettlementController extends BaseController {
             getUserIdFromRequest(request),
             roomId,
         );
+    }
+
+    @Get('')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage('Lấy danh sách quyết toán thành công.')
+    public async getSettlementsByRoom(
+        @Param('roomId', IsMongoIdParam) roomId: string,
+    ) {
+        return this.settlementService.getSettlementByRoom(roomId);
     }
 }

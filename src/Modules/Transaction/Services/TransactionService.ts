@@ -253,7 +253,10 @@ export default class TransactionService extends AbstractCrudService<Transaction>
     ): asserts room is Room {
         if (!room) throw new NotFoundException(Messages.MSG_015);
 
-        if (!getTransactionOfRoomRequest.allUnpaidTransactions) {
+        if (
+            !getTransactionOfRoomRequest.allUnpaidTransactions &&
+            !getTransactionOfRoomRequest.allUnpaidTransactions
+        ) {
             const days = calculateDateDiffInDays(
                 getTransactionOfRoomRequest.from,
                 getTransactionOfRoomRequest.to,

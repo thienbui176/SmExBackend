@@ -11,7 +11,7 @@ export enum SETTLEMENT_PAYMENT_STATUS {
 
 export class SettlementDetail {
     @Prop({ ref: User.name, type: Types.ObjectId, required: true })
-    userId: Types.ObjectId;
+    user: Types.ObjectId;
 
     @Prop({ type: Number, required: true, min: 0 })
     totalPaid: number;
@@ -25,7 +25,7 @@ export default class SettlementHistory {
     @Prop({ required: true, type: Types.ObjectId })
     roomId: Types.ObjectId;
 
-    @Prop({ required: true, type: Types.ObjectId })
+    @Prop({ required: true, type: Types.ObjectId, ref: User.name })
     settlementBy: Types.ObjectId;
 
     @Prop({ required: true, type: Date })
@@ -47,11 +47,17 @@ export default class SettlementHistory {
     paymentStatus: SETTLEMENT_PAYMENT_STATUS;
 
     @Prop({
-        type: [SettlementDetail],
+        type: [
+            {
+                user: { ref: User.name, type: Types.ObjectId, required: true },
+                totalPaid: { type: Number, required: true, min: 0 },
+                totalPurchased: { type: Number, required: true, min: 0 },
+            },
+        ],
         required: true,
     })
     details: {
-        userId: Types.ObjectId;
+        user: Types.ObjectId;
         totalPaid: number;
         totalPurchased: number;
     }[];

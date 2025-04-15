@@ -29,29 +29,22 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
         try {
             const room = await this.roomService.findById(roomId);
             this.validateCreateSettlementTransaction(requesterUserId, room);
-            const startDate = room.finalSettlementDate;
-            const endDate = new Date();
             const transactions = await this.transactionService.findAll({
                 // Chỉ thực hiện tính cho những giao dịch chưa được tính.
                 settlementId: { $eq: null },
                 roomId: new Types.ObjectId(roomId),
-                dateOfPurchase: {
-                    $gte: new Date(startDate),
-                    $lte: new Date(endDate),
-                },
             });
 
             if (!transactions.length)
-                throw new NotFoundException(
-                    `Không có giao dịch nào trong khoảng thời gian từ ${convertDateToDDMMYYYY(startDate)} đến ${convertDateToDDMMYYYY(endDate)}`,
-                );
+                throw new NotFoundException(`Không có giao dịch nào cần quyết toán`);
 
             const detailsAfterCalculate = this.calculateRoomSettlement(room, transactions);
 
+            const now = new Date();
             const settlementHistory = new SettlementHistory();
-            const settlementRequestCreationDate = new Date();
-            settlementHistory.from = startDate;
-            settlementHistory.to = endDate;
+            const settlementRequestCreationDate = now;
+            settlementHistory.from = room.finalSettlementDate;
+            settlementHistory.to = new Date();
             settlementHistory.roomId = new Types.ObjectId(roomId);
             settlementHistory.settlementAt = settlementRequestCreationDate;
             settlementHistory.settlementBy = new Types.ObjectId(requesterUserId);
@@ -62,7 +55,7 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
             const settlementHistoryCreated = await this.repository.create(settlementHistory);
             if (settlementHistoryCreated) {
                 await this.roomService.update(roomId, {
-                    finalSettlementDate: endDate,
+                    finalSettlementDate: now,
                 });
                 // Nên xử lý đẩy vào queue xử lí
                 await Promise.all(
@@ -73,21 +66,33 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
                         });
                     }),
                 );
+                return settlementHistoryCreated.populate('settlementBy details.user');
             }
-            return settlementHistoryCreated;
         } catch (error) {
             this.logger.error(error);
             throw error;
         }
     }
 
-    public updateSettlement() {}
+    public async getSettlementByRoom(roomId: string) {
+        const room = await this.roomService.findById(roomId);
+        if (!room) throw new NotFoundException('Phòng này không tồn tại.');
+
+        const settlements = await this.repository
+            .find({
+                roomId: new Types.ObjectId(roomId),
+            })
+            .populate('settlementBy details.user')
+            .lean();
+
+        return settlements || [];
+    }
 
     private calculateRoomSettlement(room: Room, transactions: Transaction[]) {
         let totalAmount = 0;
         const details = room.members.reduce((acc, memberId) => {
             acc[memberId.toString()] = {
-                userId: memberId,
+                user: memberId,
                 totalPaid: 0,
                 totalPurchased: 0,
             };
