@@ -108,10 +108,14 @@ export default class RoomService extends AbstractCrudService<Room> {
     ) {
         try {
             await this.validateInviteMembers(requesterUserId, roomId, inviteMemberRequest);
-            const roomUpdated = await this.repository.findByIdAndUpdate(roomId, {
-                members: { $push: [...inviteMemberRequest.invitees] },
-            });
-            return roomUpdated;
+            await Promise.all(
+                inviteMemberRequest.invitees.map(async (invi) => {
+                    return this.repository.findByIdAndUpdate(roomId, {
+                        $push: { members: new Types.ObjectId(invi) },
+                    });
+                }),
+            );
+            return await this.repository.findById(roomId).populate('host members').lean();
         } catch (error) {
             this.logger.error(error);
             throw error;
@@ -169,7 +173,9 @@ export default class RoomService extends AbstractCrudService<Room> {
                 name: updateRoomRequest.name,
                 description: updateRoomRequest.description,
             });
-            return roomUpdated;
+            if (roomUpdated) {
+                return roomUpdated.populate('host members');
+            }
         } catch (error) {
             this.logger.error(error);
             throw error;
@@ -207,8 +213,8 @@ export default class RoomService extends AbstractCrudService<Room> {
         try {
             const room = await this.repository
                 .findById(roomId)
-                .populate('host', 'profile')
-                .populate('members', 'profile')
+                .populate('host')
+                .populate('members')
                 .lean();
 
             if (!room) throw new NotFoundException(Messages.MSG_015);
@@ -238,10 +244,14 @@ export default class RoomService extends AbstractCrudService<Room> {
             ]);
             this.validateTransferHost(room, newHost, requesterUserId, newHostId);
 
-            const roomUpdated = await this.repository.findByIdAndUpdate(roomId, {
-                host: newHostId,
-            });
-            return roomUpdated;
+            const roomUpdated = await this.repository.findByIdAndUpdate(
+                roomId,
+                {
+                    host: new Types.ObjectId(newHostId),
+                },
+                { new: true },
+            );
+            return roomUpdated && roomUpdated.populate('host members');
         } catch (error) {
             this.logger.error(error);
             throw error;
