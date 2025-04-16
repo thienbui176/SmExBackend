@@ -100,7 +100,7 @@ export default class RoomController extends BaseController {
 
     @Post('/:roomId/transfer-host')
     @UseGuards(JwtAccessAuthGuard)
-    @ResponseMessage('')
+    @ResponseMessage('Chuyển quyền chủ phòng thành công.    ')
     transferHost(
         @Req() request: Request,
         @Param('roomId', IsMongoIdParam) roomId: string,

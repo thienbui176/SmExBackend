@@ -170,19 +170,19 @@ export class AuthUserService extends BaseService {
         const changePasswordUrl = `localhost:3000/auth/change-password?token=${tokenChangePassword}`;
 
         const html = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
-            <h2 style="color: #333;">Đổi mật khẩu của bạn</h2>
-            <p>Chào <strong>${email}</strong>,</p>
+     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
+     <h2 style="color: #333;">Đổi mật khẩu của bạn</h2>
+     <p>Chào <strong>${email}</strong>,</p>
              <p>Chúng tôi đã nhận được yêu cầu đổi mật khẩu cho tài khoản của bạn. Vui lòng nhấn vào nút bên dưới để đổi mật khẩu:</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${changePasswordUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
-                Đổi mật khẩu
-              </a>
-            </div>
-            <p>Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này.</p>
-            <p>Trân trọng,<br/>Đội ngũ hỗ trợ</p>
-          </div>
-        `;
+     <div style="text-align: center; margin: 30px 0;">
+     <a href="${changePasswordUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
+     Đổi mật khẩu
+     </a>
+     </div>
+     <p>Nếu bạn không yêu cầu đổi mật khẩu, vui lòng bỏ qua email này.</p>
+     <p>Trân trọng,<br/>Đội ngũ hỗ trợ</p>
+     </div>
+     `;
 
         await this.mailService.sendMail(email, 'Đổi mật khẩu tài khoản', html);
     }
