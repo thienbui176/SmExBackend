@@ -1,9 +1,10 @@
 import { AbstractCrudService } from 'src/Core/Base/AbstractCrudService';
 import { User } from './Entity/User';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, RootFilterQuery } from 'mongoose';
+import { Model, RootFilterQuery, UpdateQuery } from 'mongoose';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import SearchUserByEmailRequest from './Request/SearchUserRequest';
+import UpdateProfileUserRequest from './Request/UpdateProfileUserRequest';
 
 @Injectable()
 export class UserService extends AbstractCrudService<User> {
@@ -26,6 +27,26 @@ export class UserService extends AbstractCrudService<User> {
 
         const user = await this.repository.find(filter).lean();
         return user;
+    }
+
+    public async updateProfileUser(
+        userId: string,
+        updateProfileUserRequest: UpdateProfileUserRequest,
+    ) {
+        const user = await this.repository.findById(userId).lean();
+        if (user) {
+            const update: UpdateQuery<User> = {
+                profile: {
+                    ...user.profile,
+                    ...updateProfileUserRequest,
+                },
+            };
+            const userUpdated = await this.repository.findByIdAndUpdate(userId, update, {
+                new: true,
+            });
+
+            return userUpdated;
+        }
     }
 
     public async findByEmail(email: string) {
