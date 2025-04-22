@@ -5,10 +5,14 @@ import { Model, RootFilterQuery, UpdateQuery } from 'mongoose';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import SearchUserByEmailRequest from './Request/SearchUserRequest';
 import UpdateProfileUserRequest from './Request/UpdateProfileUserRequest';
+import { CloudinaryService } from 'src/Providers/Cloudinary/CloudinaryService';
 
 @Injectable()
 export class UserService extends AbstractCrudService<User> {
-    constructor(@InjectModel(User.name) protected repository: Model<User>) {
+    constructor(
+        @InjectModel(User.name) protected repository: Model<User>,
+        private readonly cloudinaryService: CloudinaryService,
+    ) {
         super(repository);
     }
 
@@ -47,6 +51,10 @@ export class UserService extends AbstractCrudService<User> {
 
             return userUpdated;
         }
+    }
+
+    public async updatePhoto(userId: string, file: Express.Multer.File) {
+        await this.cloudinaryService.uploadImage(file);
     }
 
     public async findByEmail(email: string) {

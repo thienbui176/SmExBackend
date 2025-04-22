@@ -20,6 +20,9 @@ export class Profile {
 
     @Prop({ default: null, maxlength: 522 })
     address?: string;
+
+    @Prop({default: null})
+    photo?: string;
 }
 
 export const ProfileSchema = SchemaFactory.createForClass(Profile);

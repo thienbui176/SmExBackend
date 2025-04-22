@@ -9,7 +9,9 @@ import {
     Query,
     Req,
     Response,
+    UploadedFile,
     UseGuards,
+    UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './UserService';
 import { getUserIdFromRequest } from 'src/Core/Utils/Helpers';
@@ -20,6 +22,7 @@ import { ApiBearerAuth } from '@nestjs/swagger';
 import SearchUserRequest from './Request/SearchUserRequest';
 import UpdateProfileUserRequest from './Request/UpdateProfileUserRequest';
 import { RemoveUndefinedPipe } from 'src/Core/Pipes/RemoveUndefinedPipe';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiBearerAuth('jwt-access-token')
 @Controller('/users')
@@ -50,5 +53,13 @@ export class UserController {
             getUserIdFromRequest(req),
             updateProfileUserRequest,
         );
+    }
+
+    @Patch('/update-photo')
+    @UseGuards(JwtAccessAuthGuard)
+    @UseInterceptors(FileInterceptor('file'))
+    @ResponseMessage('Cập nhật hình đại diện thành công.')
+    updatePhoto(@Req() req: Request, @UploadedFile('file') file: Express.Multer.File) {
+        return this.userService.updatePhoto(getUserIdFromRequest(req), file);
     }
 }
