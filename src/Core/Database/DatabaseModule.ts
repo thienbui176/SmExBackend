@@ -15,20 +15,20 @@ env.config();
             }),
             inject: [ConfigService],
         }),
-        TypeOrmModule.forRootAsync({
-            useFactory: () => {
-                return {
-                    type: 'mysql',
-                    host: process.env.MYSQL_HOST,
-                    port: Number(process.env.MYSQL_PORT) || 3306,
-                    username: process.env.MYSQL_USERNAME,
-                    password: process.env.MYSQL_PW,
-                    database: process.env.MYSQL_DB_NAME,
-                    entities: [User, Profile],
-                    synchronize: process.env.NODE_ENV === 'dev' ? true : false,
-                };
-            },
-        }),
+        // TypeOrmModule.forRootAsync({
+        //     useFactory: () => {
+        //         return {
+        //             type: 'mysql',
+        //             host: process.env.MYSQL_HOST,
+        //             port: Number(process.env.MYSQL_PORT) || 3306,
+        //             username: process.env.MYSQL_USERNAME,
+        //             password: process.env.MYSQL_PW,
+        //             database: process.env.MYSQL_DB_NAME,
+        //             entities: [User, Profile],
+        //             synchronize: process.env.NODE_ENV === 'dev' ? true : false,
+        //         };
+        //     },
+        // }),
     ],
     providers: [],
     exports: [MongooseModule],

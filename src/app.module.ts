@@ -8,6 +8,7 @@ import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TransformInterceptor } from './Core/Interceptors/TransformInterceptor';
 import TransactionModule from './Modules/Transaction/TransactionModule';
 import ModuleV2 from './ModulesV2/ModuleV2';
+import ExpenseModule from './Modules/Expenses/ExpenseModule';
 
 @Module({
     imports: [
@@ -17,7 +18,8 @@ import ModuleV2 from './ModulesV2/ModuleV2';
         RoomModule,
         AuthModule,
         TransactionModule,
-        ModuleV2,
+        ExpenseModule,
+        // ModuleV2,
     ],
     providers: [{ provide: APP_INTERCEPTOR, useClass: TransformInterceptor }],
 })

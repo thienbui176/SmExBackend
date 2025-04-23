@@ -58,7 +58,7 @@ export default class CreateTransactionRequest {
     dateOfPurchase: Date;
 
     @ApiProperty({ example: '67f53c1b2bd3c8423ad6b48e' })
-    @IsNotEmpty()
+    @IsNotEmpty()Q
     @IsMongoId({ message: Messages.IS_NOT_MONGO_ID })
     paidBy: string;
 
