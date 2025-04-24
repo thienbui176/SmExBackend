@@ -60,7 +60,7 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
                 // Nên xử lý đẩy vào queue xử lí
                 await Promise.all(
                     transactions.map(async function (transaction) {
-                        return _transactionService.update(transaction['_id'], {
+                        return _transactionService.update(transaction._id.toString(), {
                             settlementAt: settlementRequestCreationDate,
                             settlementId: settlementHistoryCreated._id,
                         });

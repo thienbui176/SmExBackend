@@ -27,6 +27,7 @@ import TransactionHistoryService from './TransactionHistoryService';
 import { TRANSACTION_HISTORY_ACTION } from '../Entity/TransactionHistory';
 import { User } from 'src/Modules/User/Entity/User';
 import { UserService } from 'src/Modules/User/UserService';
+import ExpenseService from 'src/Modules/Expenses/ExpenseService';
 
 @Injectable()
 export default class TransactionService extends AbstractCrudService<Transaction> {
@@ -36,6 +37,7 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         private readonly roomService: RoomService,
         private readonly transactionHistoryService: TransactionHistoryService,
         private readonly userService: UserService,
+        private readonly expenseService: ExpenseService,
     ) {
         super(repository);
     }
@@ -70,15 +72,17 @@ export default class TransactionService extends AbstractCrudService<Transaction>
 
             const transactionCreated = await this.repository.create(transaction);
             if (transactionCreated) {
-                // Lưu lại lịch sử của giao dịch
-                this.transactionHistoryService.create({
-                    action: TRANSACTION_HISTORY_ACTION.CREATE,
-                    newValue: JSON.stringify(
-                        await transactionCreated.populate('paidBy createdBy split.user'),
-                    ),
-                    changedBy: new Types.ObjectId(creatorId),
-                    transactionId: transactionCreated._id,
-                });
+                await Promise.all([
+                    this.addExpenseForUsers(transactionCreated),
+                    this.transactionHistoryService.create({
+                        action: TRANSACTION_HISTORY_ACTION.CREATE,
+                        newValue: JSON.stringify(
+                            await transactionCreated.populate('paidBy createdBy split.user'),
+                        ),
+                        changedBy: new Types.ObjectId(creatorId),
+                        transactionId: transactionCreated._id,
+                    }),
+                ]);
             }
             return transactionCreated;
         } catch (error) {
@@ -228,17 +232,20 @@ export default class TransactionService extends AbstractCrudService<Transaction>
 
             if (transactionUpdated) {
                 /** Thực hiện ghi lại lịch sử cho thay đổi giao dịch (!!!!IMPORTANT) */
-                await this.transactionHistoryService.create({
-                    changedBy: new Types.ObjectId(requesterUserId),
-                    action: TRANSACTION_HISTORY_ACTION.UPDATE,
-                    transactionId: new Types.ObjectId(transactionId),
-                    oldValue: JSON.stringify(
-                        transaction && transaction.populate('paidBy createdBy split.user'),
-                    ),
-                    newValue: JSON.stringify(
-                        transactionUpdated.populate('paidBy createdBy split.user'),
-                    ),
-                });
+                await Promise.all([
+                    this.updateExpenseForUsers(transactionUpdated),
+                    this.transactionHistoryService.create({
+                        changedBy: new Types.ObjectId(requesterUserId),
+                        action: TRANSACTION_HISTORY_ACTION.UPDATE,
+                        transactionId: new Types.ObjectId(transactionId),
+                        oldValue: JSON.stringify(
+                            transaction && transaction.populate('paidBy createdBy split.user'),
+                        ),
+                        newValue: JSON.stringify(
+                            transactionUpdated.populate('paidBy createdBy split.user'),
+                        ),
+                    }),
+                ]);
                 return transactionUpdated.populate('paidBy createdBy split.user');
             }
         } catch (error) {
@@ -340,5 +347,51 @@ export default class TransactionService extends AbstractCrudService<Transaction>
             if (!checkElementInArrayObjectId(room.members, val.userId))
                 throw new NotFoundException('Người được chia tiền không tồn tại trong phòng.');
         });
+    }
+
+    private async addExpenseForUsers(transaction: Transaction) {
+        const totalRatio = transaction.split.reduce((val, curr) => {
+            return val + curr.ratio;
+        }, 0);
+
+        await Promise.all(
+            transaction.split.map(({ user, ratio }) => {
+                return this.expenseService.create({
+                    userId: user,
+                    amount: (transaction.amount * ratio) / totalRatio,
+                    dateOfPurchase: transaction.dateOfPurchase,
+                    rootTransaction: transaction._id,
+                    title: transaction.title,
+                    description: transaction.description,
+                });
+            }),
+        );
+    }
+
+    private async updateExpenseForUsers(transaction: Transaction) {
+        const totalRatio = transaction.split.reduce((val, curr) => {
+            return val + curr.ratio;
+        }, 0);
+
+        const userExpenses = await this.expenseService.findAll({
+            rootTransaction: transaction._id,
+        });
+
+        await Promise.all(
+            userExpenses.map((expense) => {
+                const split = transaction.split.find((val) => val.user == expense.userId);
+                if (split) {
+                    return this.expenseService.update(expense._id.toString(), {
+                        amount: (transaction.amount * split.ratio) / totalRatio,
+                        dateOfPurchase: transaction.dateOfPurchase,
+                        rootTransaction: transaction._id,
+                        title: transaction.title,
+                        description: transaction.description,
+                    });
+                } else {
+                    return this.expenseService.delete(expense._id.toString());
+                }
+            }),
+        );
     }
 }

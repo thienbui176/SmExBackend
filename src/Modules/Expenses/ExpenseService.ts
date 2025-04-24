@@ -1,31 +1,39 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AbstractCrudService } from 'src/Core/Base/AbstractCrudService';
 import { Expense } from './Entity/Expense';
 import { PaginationRequest } from 'src/Core/Request/PaginationRequest';
 import { Model, RootFilterQuery, Types } from 'mongoose';
 import CreateExpenseRequest from './Request/CreateExpenseRequets';
 import UpdateExpenseRequets from './Request/UpdateExpenseRequest';
+import { InjectModel } from '@nestjs/mongoose';
+import GetExpensesRequest from './Request/GetExpensesRequest';
+import { calculateDateDiffInDays } from 'src/Core/Utils/Helpers';
 
 @Injectable()
 export default class ExpenseService extends AbstractCrudService<Expense> {
-    public async getExpensesWithPagination(userId: string, paginationRequest: PaginationRequest) {
+    constructor(
+        @InjectModel(Expense.name)
+        protected readonly repository: Model<Expense>,
+    ) {
+        super(repository);
+    }
+
+    public async getExpenses(userId: string, getExpensesRequest: GetExpensesRequest) {
         try {
+            const days = calculateDateDiffInDays(getExpensesRequest.from, getExpensesRequest.to);
+            if (days <= 0 || days > 90)
+                throw new BadRequestException(
+                    'Ngày bắt đầu và kết thúc phải cách nhau 1 ngày và bé hơn 90 ngày.',
+                );
+
             const conditionGetListExpense: RootFilterQuery<Expense> = {
                 userId: new Types.ObjectId(userId),
-            };
-            return this.paginate(
-                paginationRequest,
-                (skip, limit) => {
-                    return this.repository
-                        .find(conditionGetListExpense)
-                        .skip(skip)
-                        .populate('host')
-                        .populate('members')
-                        .limit(limit)
-                        .lean();
+                dateOfPurchase: {
+                    $gte: new Date(getExpensesRequest.from),
+                    $lte: new Date(getExpensesRequest.to),
                 },
-                () => this.repository.countDocuments(conditionGetListExpense),
-            );
+            };
+            return this.repository.find(conditionGetListExpense).populate('rootTransaction').lean();
         } catch (error) {
             this.logger.error(error);
             throw error;
@@ -51,6 +59,36 @@ export default class ExpenseService extends AbstractCrudService<Expense> {
     }
 
     public async updateExpense(expenseId: string, updateExpenseRequest: UpdateExpenseRequets) {
-        
+        try {
+            const expense = await this.findById(expenseId);
+            if (!expense) throw new NotFoundException('Chi tiêu này không tồn tại trong hệ thống.');
+            if (expense.rootTransaction)
+                throw new NotFoundException(
+                    'Không thể cập nhật chi tiêu được đồng bộ từ phòng chung',
+                );
+            const expenseUpdated = await this.repository.findByIdAndUpdate(expenseId, {
+                ...expense,
+                ...updateExpenseRequest,
+            });
+            if (expenseUpdated) return expenseUpdated;
+            throw new BadRequestException('Có lỗi trong quá trình cập nhật chi tiêu.');
+        } catch (error) {
+            throw error;
+        }
+    }
+
+    public async deleteExpense(expenseId: string) {
+        try {
+            const expense = await this.findById(expenseId);
+            if (!expense) throw new NotFoundException('Chi tiêu này không tồn tại trong hệ thống.');
+            if (expense.rootTransaction)
+                throw new NotFoundException(
+                    'Không thể cập nhật chi tiêu được đồng bộ từ phòng chung',
+                );
+            if (await this.repository.findByIdAndDelete(expenseId)) return true;
+            throw new BadRequestException('Có lỗi trong quá trình xóa chi tiêu.');
+        } catch (error) {
+            throw error;
+        }
     }
 }

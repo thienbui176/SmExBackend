@@ -1,4 +1,4 @@
-import { Model, RootFilterQuery } from 'mongoose';
+import { Model, QueryOptions, RootFilterQuery } from 'mongoose';
 import BaseService from './BaseService';
 import { PaginationRequest } from '../Request/PaginationRequest';
 import { PaginationResult } from '../Interfaces/PaginationResult';
@@ -15,6 +15,14 @@ export abstract class AbstractCrudService<T> extends BaseService {
 
     async update(id: string, data: Partial<T>): Promise<T | null> {
         return await this.repository.findByIdAndUpdate(id, data, { new: true });
+    }
+
+    async updateWhere(
+        filter: RootFilterQuery<T>,
+        data: Partial<T>,
+        options?: QueryOptions<T>,
+    ): Promise<T | null> {
+        return await this.repository.findOneAndUpdate(filter, data, options);
     }
 
     async findById(id: string): Promise<T | null> {

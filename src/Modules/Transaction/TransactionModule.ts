@@ -11,6 +11,7 @@ import SettlementService from './Services/SettlementService';
 import SettlementHistory, { SettlementHistorySchema } from './Entity/SettlementHistory';
 import TransactionHistoryService from './Services/TransactionHistoryService';
 import SettlementController from './SettlementController';
+import ExpenseModule from '../Expenses/ExpenseModule';
 
 @Module({
     imports: [
@@ -21,6 +22,7 @@ import SettlementController from './SettlementController';
         ]),
         RoomModule,
         UserModule,
+        ExpenseModule,
     ],
     controllers: [TransactionController, SettlementController],
     providers: [TransactionService, TransactionHistoryService, RoomService, SettlementService],
