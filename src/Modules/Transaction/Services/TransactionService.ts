@@ -376,11 +376,12 @@ export default class TransactionService extends AbstractCrudService<Transaction>
         const userExpenses = await this.expenseService.findAll({
             rootTransaction: transaction._id,
         });
-
+        const splitUsed: string[] = [];
         await Promise.all(
             userExpenses.map((expense) => {
                 const split = transaction.split.find((val) => val.user == expense.userId);
                 if (split) {
+                    splitUsed.push(split.user.toString());
                     return this.expenseService.update(expense._id.toString(), {
                         amount: (transaction.amount * split.ratio) / totalRatio,
                         dateOfPurchase: transaction.dateOfPurchase,
@@ -391,6 +392,19 @@ export default class TransactionService extends AbstractCrudService<Transaction>
                 } else {
                     return this.expenseService.delete(expense._id.toString());
                 }
+            }),
+        );
+        await Promise.all(
+            transaction.split.map((s) => {
+                if (splitUsed.includes(s.user.toString())) return;
+                return this.expenseService.create({
+                    amount: (transaction.amount * s.ratio) / totalRatio,
+                    dateOfPurchase: transaction.dateOfPurchase,
+                    rootTransaction: transaction._id,
+                    title: transaction.title,
+                    description: transaction.description,
+                    userId: s.user,
+                });
             }),
         );
     }

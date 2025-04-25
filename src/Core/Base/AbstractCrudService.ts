@@ -13,8 +13,8 @@ export abstract class AbstractCrudService<T> extends BaseService {
         return (await this.repository.create(data)).toObject();
     }
 
-    async update(id: string, data: Partial<T>): Promise<T | null> {
-        return await this.repository.findByIdAndUpdate(id, data, { new: true });
+    async update(id: string, data: Partial<T>, options?: QueryOptions<T>): Promise<T | null> {
+        return await this.repository.findByIdAndUpdate(id, data, { new: true, ...options });
     }
 
     async updateWhere(

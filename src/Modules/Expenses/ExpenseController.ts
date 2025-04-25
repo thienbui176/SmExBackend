@@ -1,10 +1,14 @@
-import { Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import BaseController from 'src/Core/Base/BaseController';
 import ExpenseService from './ExpenseService';
 import { JwtAccessAuthGuard } from '../Auth/Guards/JwtAccessGuard';
-import Messages from 'src/Core/Messages/Messages';
 import { ResponseMessage } from 'src/Core/Metadata/ResponseMessageMetadata';
+import CreatExpenseRequest from './Request/CreateExpenseRequets';
+import { getUserIdFromRequest } from 'src/Core/Utils/Helpers';
+import { Request } from 'express';
+import GetExpensesRequest from './Request/GetExpensesRequest';
+import UpdateExpenseRequets from './Request/UpdateExpenseRequest';
 
 @ApiBearerAuth('jwt-access-token')
 @Controller('/expense')
@@ -15,16 +19,38 @@ export default class ExpenseController extends BaseController {
 
     @Post()
     @UseGuards(JwtAccessAuthGuard)
-    @ResponseMessage('Taoj')
-    public async createTransaction(
+    @ResponseMessage('Tạo chi tiêu thành công.')
+    public async createExpense(
         @Req() request: Request,
-        @Param('roomId', IsMongoIdParam) roomId: string,
-        @Body() createTransactionRequest: CreateTransactionRequest,
+        @Body() createExpenseRequest: CreatExpenseRequest,
     ) {
-        return this.transactionService.createTransaction(
+        return this.ExpenseService.createExpense(
             getUserIdFromRequest(request),
-            roomId,
-            createTransactionRequest,
+            createExpenseRequest,
         );
+    }
+
+    @Get()
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage('Lấy danh sách chi tiêu thành công.')
+    public async getExpenses(@Req() request: Request, @Body() getExpenses: GetExpensesRequest) {
+        return this.ExpenseService.getExpenses(getUserIdFromRequest(request), getExpenses);
+    }
+
+    @Patch('/:expenseId')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage('Lấy danh sách chi tiêu thành công.')
+    public async updateExpenses(
+        @Param('expenseId') expenseId: string,
+        @Body() updateExpense: UpdateExpenseRequets,
+    ) {
+        return this.ExpenseService.updateExpense(expenseId, updateExpense);
+    }
+
+    @Delete('/:expenseId')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage('Lấy danh sách chi tiêu thành công.')
+    public async deleteExpense(@Param('expenseId') expenseId: string) {
+        return this.ExpenseService.deleteExpense(expenseId);
     }
 }

@@ -18,6 +18,9 @@ export class SettlementDetail {
 
     @Prop({ type: Number, required: true, min: 0 })
     totalPurchased: number;
+
+    @Prop({ type: Boolean, default: false })
+    isSettled: boolean;
 }
 
 @Schema({ versionKey: false, collection: 'SMEX_SettlementHistory' })
@@ -52,6 +55,7 @@ export default class SettlementHistory {
                 user: { ref: User.name, type: Types.ObjectId, required: true },
                 totalPaid: { type: Number, required: true, min: 0 },
                 totalPurchased: { type: Number, required: true, min: 0 },
+                isSettled: { type: Boolean, default: false },
             },
         ],
         required: true,
@@ -60,6 +64,7 @@ export default class SettlementHistory {
         user: Types.ObjectId;
         totalPaid: number;
         totalPurchased: number;
+        isSettled: boolean;
     }[];
 }
 

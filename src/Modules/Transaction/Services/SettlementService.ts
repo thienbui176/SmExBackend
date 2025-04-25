@@ -1,19 +1,17 @@
 import { AbstractCrudService } from 'src/Core/Base/AbstractCrudService';
-import SettlementHistory, { SettlementDetail } from '../Entity/SettlementHistory';
-import { Model, RootFilterQuery, Types } from 'mongoose';
+import SettlementHistory, {
+    SETTLEMENT_PAYMENT_STATUS,
+    SettlementDetail,
+} from '../Entity/SettlementHistory';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Transaction } from '../Entity/Transaction';
 import { Room } from '../../Room/Entity/Room';
 import RoomService from '../../Room/RoomService';
 import TransactionService from './TransactionService';
-import SettlementTransactionRequest from '../Request/SettlementTransactionRequest';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { UserService } from 'src/Modules/User/UserService';
-import {
-    calculateDateDiffInDays,
-    checkElementInArrayObjectId,
-    convertDateToDDMMYYYY,
-} from 'src/Core/Utils/Helpers';
+import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { checkElementInArrayObjectId } from 'src/Core/Utils/Helpers';
+import UpdateStatusSettledOfUserRequest from '../Request/UpdateStatusSettledOfUserRequest';
 
 export default class SettlementService extends AbstractCrudService<SettlementHistory> {
     constructor(
@@ -95,6 +93,7 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
                 user: memberId,
                 totalPaid: 0,
                 totalPurchased: 0,
+                isSettled: false,
             };
             return acc;
         }, {});
@@ -127,6 +126,56 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
             totalAmount,
             details: Object.values(details),
         };
+    }
+
+    public async updateStatusSettledOfUser(
+        requesterUserId: string,
+        settlementId: string,
+        personUpdatedForSettlementId: string,
+        { isSettled }: UpdateStatusSettledOfUserRequest,
+    ) {
+        try {
+            const settlement = await this.repository.findById(settlementId).lean();
+            if (!settlement) throw new NotFoundException('Dữ liệu tất toán không tồn tại.');
+
+            if (settlement.settlementBy.toString() !== requesterUserId)
+                throw new ForbiddenException('Chỉ người tạo tất toán mới được phép cập nhật.');
+
+            const settlementUpdatedDetails = await this.repository.findOneAndUpdate(
+                {
+                    _id: settlementId,
+                    'details.user': personUpdatedForSettlementId,
+                },
+                {
+                    $set: {
+                        'details.isSettled': isSettled,
+                    },
+                },
+                { new: true },
+            );
+            if (settlementUpdatedDetails) {
+                let paymentStatus = settlementUpdatedDetails.paymentStatus;
+                const countSettled = settlementUpdatedDetails.details.reduce((total, detail) => {
+                    if (detail.isSettled) return total + 1;
+                    return total + 0;
+                }, 0);
+                if (countSettled > 0 && countSettled < settlementUpdatedDetails.details.length) {
+                    paymentStatus = SETTLEMENT_PAYMENT_STATUS.PAID_IN_PART;
+                }
+                if (countSettled === 0) paymentStatus = SETTLEMENT_PAYMENT_STATUS.NO_ONE_PAID;
+                if (countSettled === settlementUpdatedDetails.details.length)
+                    paymentStatus = SETTLEMENT_PAYMENT_STATUS.PAID_IN_FULL;
+                const settlementUpdated = await this.repository.findByIdAndUpdate(settlementId, {
+                    paymentStatus,
+                });
+                return settlementUpdated;
+            }
+            throw new BadRequestException(
+                'Có lỗi trong quá trình cập nhật trạng thái tất toán của thành viên.',
+            );
+        } catch (error) {
+            throw error;
+        }
     }
 
     private validateCreateSettlementTransaction(
