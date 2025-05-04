@@ -20,6 +20,8 @@ import MailService from 'src/Providers/Mailer/MailService';
 import UserVerifyEmailRequest from './Request/User/VerifyEmailRequest';
 import ChangePasswordRequest from './Request/User/ChangePasswordRequest';
 import { TokenPayload } from 'src/Providers/Token/Interfaces/TokenPayload';
+import * as env from 'dotenv';
+env.config();
 
 @Injectable()
 export class AuthUserService extends BaseService {
@@ -146,7 +148,8 @@ export class AuthUserService extends BaseService {
     }
 
     private async sendMailVerifyUser(email: string, tokenVerifyEmail: string) {
-        const verifyUrl = `localhost:3000/auth/user/verify-email?token=${tokenVerifyEmail}`;
+        const feUrl = process.env.FE_URL;
+        const verifyUrl = `${feUrl}?token=${tokenVerifyEmail}`;
 
         const html = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">
@@ -154,9 +157,7 @@ export class AuthUserService extends BaseService {
             <p>Chào <strong>${email}</strong>,</p>
             <p>Cảm ơn bạn đã đăng ký tài khoản. Vui lòng nhấn vào nút bên dưới để xác thực email:</p>
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${verifyUrl}" style="background-color: #4CAF50; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px;">
-                Xác thực Email
-              </a>
+              <a>${verifyUrl}</a>
             </div>
             <p>Nếu bạn không yêu cầu đăng ký tài khoản, vui lòng bỏ qua email này.</p>
             <p>Trân trọng,<br/>Đội ngũ hỗ trợ</p>
