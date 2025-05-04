@@ -1,4 +1,15 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Query,
+    Req,
+    UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import BaseController from 'src/Core/Base/BaseController';
 import ExpenseService from './ExpenseService';
@@ -33,8 +44,15 @@ export default class ExpenseController extends BaseController {
     @Get()
     @UseGuards(JwtAccessAuthGuard)
     @ResponseMessage('Lấy danh sách chi tiêu thành công.')
-    public async getExpenses(@Req() request: Request, @Body() getExpenses: GetExpensesRequest) {
+    public async getExpenses(@Req() request: Request, @Query() getExpenses: GetExpensesRequest) {
         return this.ExpenseService.getExpenses(getUserIdFromRequest(request), getExpenses);
+    }
+
+    @Get(':id')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage('Lấy chi tiết chi tiêu thành công.')
+    public async getDetailExpense(@Param('id') id: string) {
+        return this.ExpenseService.getDetailExpense(id);
     }
 
     @Patch('/:expenseId')

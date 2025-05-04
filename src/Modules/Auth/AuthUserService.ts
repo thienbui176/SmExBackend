@@ -132,10 +132,10 @@ export class AuthUserService extends BaseService {
             if (type !== this.TYPE_REQUEST_CHANGE_PASSWORD)
                 throw new ForbiddenException('Token không tồn tại.');
             const email = subject.email;
-            const user = await this.userService.findByEmail(email);
+            const user = await this.userService.findByEmailHavePassword(email);
             if (!user) throw new NotFoundException('Email này chưa được đăng ký.');
-            if (!(await bcrypt.compare(user.password, changePasswordRequest.oldPassword)))
-                throw new UnauthorizedException('Mật khẩu cũ không đúng. ');
+            // if (!(await bcrypt.compare(user.password, changePasswordRequest.oldPassword)))
+            //     throw new UnauthorizedException('Mật khẩu cũ không đúng. ');
 
             const passwordHashed = await bcrypt.hash(changePasswordRequest.newPassword, 10);
             await this.userService.update(user._id.toString(), { password: passwordHashed });
@@ -168,6 +168,7 @@ export class AuthUserService extends BaseService {
 
     private async sendMailChangePassword(email: string, tokenChangePassword: string) {
         const changePasswordUrl = `localhost:3000/auth/change-password?token=${tokenChangePassword}`;
+        console.log(changePasswordUrl);
 
         const html = `
      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px;">

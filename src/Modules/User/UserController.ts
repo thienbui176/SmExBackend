@@ -4,6 +4,7 @@ import {
     Get,
     Inject,
     Logger,
+    Param,
     Patch,
     Post,
     Query,
@@ -40,6 +41,13 @@ export class UserController {
     @ResponseMessage('Lấy thông tin người dùng thành công.')
     search(@Query() searchUserRequest: SearchUserRequest) {
         return this.userService.searchUser(searchUserRequest);
+    }
+
+    @Get('/:userId')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage('Lấy thông tin người dùng thành công.')
+    getSomeInfoUser(@Param('userId') userId: string) {
+        return this.userService.getSomeInfoUser(userId);
     }
 
     @Patch('/update-profile')

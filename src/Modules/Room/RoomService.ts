@@ -17,6 +17,7 @@ import { PaginationRequest } from 'src/Core/Request/PaginationRequest';
 import InviteMemberRequest from './Request/InviteMemberRequest';
 import UpdateRoomRequest from './Request/UpdateRoomRequest';
 import { checkElementInArrayObjectId } from 'src/Core/Utils/Helpers';
+import UpdateSettingsRoomRequest from './Request/UpdateSettingsRoomRequest';
 
 @Injectable()
 export default class RoomService extends AbstractCrudService<Room> {
@@ -176,6 +177,52 @@ export default class RoomService extends AbstractCrudService<Room> {
             if (roomUpdated) {
                 return roomUpdated.populate('host members');
             }
+        } catch (error) {
+            this.logger.error(error);
+            throw error;
+        }
+    }
+
+    public async updateSettingsRoom(
+        requesterUserId: string,
+        roomId: string,
+        updateSettingsRoomRequest: UpdateSettingsRoomRequest,
+    ) {
+        try {
+            const room = await this.repository.findById(roomId).lean();
+            if (!room) throw new NotFoundException(Messages.MSG_015);
+
+            if (room.host.toString() !== requesterUserId) {
+                throw new ForbiddenException(Messages.MSG_029);
+            }
+
+            const updatePayload: Partial<Record<keyof Room['settings'], any>> = {};
+
+            if (updateSettingsRoomRequest.categoriesOfExpense !== undefined) {
+                updatePayload['settings.categoriesOfExpense'] =
+                    updateSettingsRoomRequest.categoriesOfExpense;
+            }
+            if (updateSettingsRoomRequest.notifyExpenseNotes !== undefined) {
+                updatePayload['settings.notifyExpenseNotes'] =
+                    updateSettingsRoomRequest.notifyExpenseNotes;
+            }
+            if (updateSettingsRoomRequest.createdSettlementNotifications !== undefined) {
+                updatePayload['settings.createdSettlementNotifications'] =
+                    updateSettingsRoomRequest.createdSettlementNotifications;
+            }
+            if (updateSettingsRoomRequest.weeklySummaryNotifications !== undefined) {
+                updatePayload['settings.weeklySummaryNotifications'] =
+                    updateSettingsRoomRequest.weeklySummaryNotifications;
+            }
+            if (updateSettingsRoomRequest.telegramId !== undefined) {
+                updatePayload['settings.telegramId'] = updateSettingsRoomRequest.telegramId;
+            }
+
+            const roomUpdated = await this.repository
+                .findByIdAndUpdate(roomId, { $set: updatePayload }, { new: true })
+                .populate('host members');
+
+            return roomUpdated;
         } catch (error) {
             this.logger.error(error);
             throw error;

@@ -131,48 +131,55 @@ export default class SettlementService extends AbstractCrudService<SettlementHis
     public async updateStatusSettledOfUser(
         requesterUserId: string,
         settlementId: string,
-        personUpdatedForSettlementId: string,
-        { isSettled }: UpdateStatusSettledOfUserRequest,
+        { isSettled, personUpdatedForSettlementId }: UpdateStatusSettledOfUserRequest,
     ) {
         try {
             const settlement = await this.repository.findById(settlementId).lean();
-            if (!settlement) throw new NotFoundException('Dữ liệu tất toán không tồn tại.');
+            if (!settlement) {
+                throw new NotFoundException('Dữ liệu tất toán không tồn tại.');
+            }
 
-            if (settlement.settlementBy.toString() !== requesterUserId)
+            if (settlement.settlementBy.toString() !== requesterUserId) {
                 throw new ForbiddenException('Chỉ người tạo tất toán mới được phép cập nhật.');
+            }
 
-            const settlementUpdatedDetails = await this.repository.findOneAndUpdate(
+            const updatedSettlement = await this.repository.findOneAndUpdate(
                 {
                     _id: settlementId,
                     'details.user': personUpdatedForSettlementId,
                 },
                 {
                     $set: {
-                        'details.isSettled': isSettled,
+                        'details.$.isSettled': isSettled,
                     },
                 },
                 { new: true },
             );
-            if (settlementUpdatedDetails) {
-                let paymentStatus = settlementUpdatedDetails.paymentStatus;
-                const countSettled = settlementUpdatedDetails.details.reduce((total, detail) => {
-                    if (detail.isSettled) return total + 1;
-                    return total + 0;
-                }, 0);
-                if (countSettled > 0 && countSettled < settlementUpdatedDetails.details.length) {
-                    paymentStatus = SETTLEMENT_PAYMENT_STATUS.PAID_IN_PART;
-                }
-                if (countSettled === 0) paymentStatus = SETTLEMENT_PAYMENT_STATUS.NO_ONE_PAID;
-                if (countSettled === settlementUpdatedDetails.details.length)
-                    paymentStatus = SETTLEMENT_PAYMENT_STATUS.PAID_IN_FULL;
-                const settlementUpdated = await this.repository.findByIdAndUpdate(settlementId, {
-                    paymentStatus,
-                });
-                return settlementUpdated;
+
+            if (!updatedSettlement) {
+                throw new BadRequestException(
+                    'Có lỗi trong quá trình cập nhật trạng thái tất toán của thành viên.',
+                );
             }
-            throw new BadRequestException(
-                'Có lỗi trong quá trình cập nhật trạng thái tất toán của thành viên.',
-            );
+
+            const countSettled = updatedSettlement.details.filter((d) => d.isSettled).length;
+            let paymentStatus: SETTLEMENT_PAYMENT_STATUS;
+
+            if (countSettled === 0) {
+                paymentStatus = SETTLEMENT_PAYMENT_STATUS.NO_ONE_PAID;
+            } else if (countSettled < updatedSettlement.details.length) {
+                paymentStatus = SETTLEMENT_PAYMENT_STATUS.PAID_IN_PART;
+            } else {
+                paymentStatus = SETTLEMENT_PAYMENT_STATUS.PAID_IN_FULL;
+            }
+
+            // Chỉ update nếu paymentStatus thay đổi
+            if (paymentStatus !== updatedSettlement.paymentStatus) {
+                updatedSettlement.paymentStatus = paymentStatus;
+                await this.repository.findByIdAndUpdate(settlementId, { paymentStatus });
+            }
+
+            return updatedSettlement.populate('settlementBy details.user');
         } catch (error) {
             throw error;
         }

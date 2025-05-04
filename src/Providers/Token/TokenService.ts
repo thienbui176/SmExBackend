@@ -40,7 +40,7 @@ export default class TokenService implements ITokenService {
         type: 'access' | 'refresh' | 'verifyEmail' | 'token' = 'access',
     ): boolean {
         try {
-            let secret: string;
+            let secret = 'token-secret';
             switch (type) {
                 case 'access':
                     secret = this.ACCESS_TOKEN_SECRET;
@@ -53,8 +53,10 @@ export default class TokenService implements ITokenService {
                     break;
                 case 'token':
                     secret = 'token-secret';
+                    break;
                 default:
                     secret = this.ACCESS_TOKEN_SECRET;
+                    break;
             }
             this.jwtService.verify(token, { secret });
             return true;

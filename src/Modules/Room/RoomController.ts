@@ -26,6 +26,7 @@ import { getUserIdFromRequest } from 'src/Core/Utils/Helpers';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { IsMongoIdParam } from 'src/Core/Validations/IsMongoIdParam';
 import TransferHostRequest from './Request/TransferHostRequest';
+import UpdateSettingsRoomRequest from './Request/UpdateSettingsRoomRequest';
 
 @ApiBearerAuth('jwt-access-token')
 @Controller('/rooms')
@@ -88,6 +89,18 @@ export default class RoomController extends BaseController {
     ) {
         const userId = getUserIdFromRequest(request);
         return this.roomService.updateRoom(userId, roomId, updateRoomRequest);
+    }
+
+    @Patch('/:roomId/settings')
+    @UseGuards(JwtAccessAuthGuard)
+    @ResponseMessage('Cập nhật cài đặt phòng thành công.')
+    updateSettingsRoom(
+        @Req() request: Request,
+        @Param('roomId', IsMongoIdParam) roomId: string,
+        @Body() updateSettingsRoom: UpdateSettingsRoomRequest,
+    ) {
+        const userId = getUserIdFromRequest(request);
+        return this.roomService.updateSettingsRoom(userId, roomId, updateSettingsRoom);
     }
 
     @Get('/:roomId')

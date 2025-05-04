@@ -53,6 +53,13 @@ export class UserService extends AbstractCrudService<User> {
         }
     }
 
+    public async getSomeInfoUser(userId: string) {
+        const user = await this.repository.findById(userId).lean();
+        if (!user) throw new NotFoundException('Thông tin người dùng không tồn tại.');
+        const { password, ...result } = user;
+        return result;
+    }
+
     public async updatePhoto(userId: string, file: Express.Multer.File) {
         await this.cloudinaryService.uploadImage(file);
     }

@@ -142,8 +142,8 @@ export default class TransactionService extends AbstractCrudService<Transaction>
             const membersObject: { [key: string]: User } = arrayToMapByKey(usersOfRoom, '_id');
             return transactions.map((transaction) => ({
                 ...transaction,
-                paidBy: membersObject[transaction.paidBy.toString()]?.profile,
-                createdAt: membersObject[transaction.createdBy.toString()]?.profile,
+                paidBy: membersObject[transaction.paidBy.toString()],
+                createdAt: membersObject[transaction.createdBy.toString()],
                 split: transaction.split.map((s) => {
                     return {
                         ...s,

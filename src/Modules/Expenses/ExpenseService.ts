@@ -8,6 +8,8 @@ import UpdateExpenseRequets from './Request/UpdateExpenseRequest';
 import { InjectModel } from '@nestjs/mongoose';
 import GetExpensesRequest from './Request/GetExpensesRequest';
 import { calculateDateDiffInDays } from 'src/Core/Utils/Helpers';
+import { Transaction } from '../Transaction/Entity/Transaction';
+import { User } from '../User/Entity/User';
 
 @Injectable()
 export default class ExpenseService extends AbstractCrudService<Expense> {
@@ -38,6 +40,47 @@ export default class ExpenseService extends AbstractCrudService<Expense> {
             this.logger.error(error);
             throw error;
         }
+    }
+
+    public async getDetailExpense(expenseId: string) {
+        if (!Types.ObjectId.isValid(expenseId)) {
+            throw new NotFoundException('Invalid expense ID');
+        }
+
+        const expense = await this.repository
+            .findById(expenseId)
+            .populate({
+                path: 'rootTransaction',
+                model: Transaction.name,
+                populate: [
+                    {
+                        path: 'roomId',
+                        model: 'Room',
+                    },
+                    {
+                        path: 'paidBy createdBy',
+                        model: User.name,
+                        select: '-password', // exclude password
+                    },
+                    {
+                        path: 'split.user',
+                        model: User.name,
+                        select: '-password', // exclude password
+                    },
+                ],
+            })
+            .populate({
+                path: 'userId',
+                model: User.name,
+                select: '-password', // in case you want info of the user who created the expense
+            })
+            .lean();
+
+        if (!expense) {
+            throw new NotFoundException('Expense not found');
+        }
+
+        return expense;
     }
 
     public async createExpense(userId: string, createExpenseRequest: CreateExpenseRequest) {
